@@ -943,6 +943,6 @@ app.get('/api/getIpAdd', function(req, res) {
 });
 	
 // Binding express app to port 3000
-app.listen(3000,function(){
+app.listen(3306,function(){
     console.log('Node server running @ http://localhost:3000')
 });
