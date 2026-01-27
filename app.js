@@ -16,7 +16,7 @@ app.use(bodyParser.json());                                     // parse applica
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
 var connection = mysql.createConnection({
-    host : 'sql306.infinityfree.com',
+    host : 'http://sql306.infinityfree.com',
     user : 'if0_40975998',
     password : 'Bhadait123',
     database : 'if0_40975998_bhadaitmisal'	
