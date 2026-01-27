@@ -16,10 +16,10 @@ app.use(bodyParser.json());                                     // parse applica
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
 var connection = mysql.createConnection({
-    host : 'http://bhadaitmisal.free.nf',
+    host : 'localhost',
     user : 'root',
     password : '',
-    database : 'if0_40975998_bhadaitmisal'	
+    database : 'bhadaitmisal'	
 });
 connection.connect();
 // ***** GET Items DATA ******
