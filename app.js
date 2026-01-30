@@ -1,7 +1,7 @@
 var express = require('express');
 var cors = require('cors')
 var bodyParser = require("body-parser"); //Used to parse the request and send our response to client
-//var path = require("path");
+var path = require("path");
 var mysql = require('mysql');
 const fs = require('fs');
 const { networkInterfaces } = require('os');
@@ -24,7 +24,7 @@ var connection = mysql.createConnection({
     database : process.env.AIVEN_MYSQL_DBNAME,
 	ssl: {
         // Read CA certificate from the file uploaded to Render
-        ca: fs.readFileSync(process.env.MYSQL_SSL_CA).toString() 
+        ca: fs.readFileSync('/etc/secrets/MYSQL_SSL_CA').toString() 
     }
 }); 
 connection.connect(); 
@@ -315,11 +315,11 @@ async function sendMail(type,report, reportDetails, callback) {
 		reportTable+="</table>"
 	}
 	 
-	/*if(type=="DB_Backup"){
+	if(type=="DB_Backup"){
 		reportTable="";
 		attachement=[{filename:"backup_bhadaitmisal.sql", path:  __dirname + '/DB_Backup/backup_bhadaitmisal.sql' }];
 		subjectText=reportDetails.branchName+": Bhadait Misal DB Backup";
-	}*/
+	}
 	
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
