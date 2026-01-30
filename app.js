@@ -16,25 +16,33 @@ app.use(bodyParser.urlencoded({'extended':'true'}));            // parse applica
 app.use(bodyParser.json());                                     // parse application/json
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
-/*var connection = mysql.createConnection({
-    host : 'localhost',
-    user : 'root',
-    password : '',
-    database : 'bhadaitmisal'	
-});*/
-
 
 var connection = mysql.createConnection({
     host : process.env.AIVEN_MYSQL_HOST,
     user : process.env.AIVEN_MYSQL_USER,
     password : process.env.AIVEN_MYSQL_PASSWORD,
     database : process.env.AIVEN_MYSQL_DBNAME,
-	/*ssl: {
+	ssl: {
         // Read CA certificate from the file uploaded to Render
         ca: fs.readFileSync('/etc/secrets/MYSQL_SSL_CA').toString() 
-    }*/
+    }
+}); 
+connection.connect(); 
+
+
+connection.on('error', function(err) {
+    console.error('Caught an error on the connection:', err.message);
+    // Implement logic to handle the specific error, e.g., reconnecting
+    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+        // Handle a lost connection, perhaps by attempting to re-establish
+        console.log('Connection lost. Attempting to reconnect...');
+        // ... add reconnection logic here ...
+    } else {
+        // Re-throw other errors if you cannot handle them
+        throw err;
+    }
 });
-connection.connect();
+
 // ***** GET Items DATA ******
  app.get('/api/GetItemsData', function(req, res) {    
        connection.query('select * from items',function(err, result){
@@ -956,6 +964,6 @@ app.get('/api/getIpAdd', function(req, res) {
 });
 	
 // Binding express app to port 3000
-app.listen(21429,function(){
-    console.log('Node server running @ http://localhost:3000')
+app.listen(21425,function(){
+    console.log('Node server running @ http://localhost:21425')
 });
