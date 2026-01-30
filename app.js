@@ -16,10 +16,10 @@ app.use(bodyParser.json());                                     // parse applica
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
 var connection = mysql.createConnection({
-    host : 'bhadaitmisal-bhadaitmisal.h.aivencloud.com',
-    user : 'avnadmin',
-    password : 'AVNS_ZuGpR80Ew8TMU5YUCvl',
-    database : 'defaultdb'	
+    host : AIVEN_MYSQL_HOST,
+    user : AIVEN_MYSQL_USER,
+    password : AIVEN_MYSQL_PASSWORD,
+    database : AIVEN_MYSQL_DBNAME	
 });
 connection.connect();
 
