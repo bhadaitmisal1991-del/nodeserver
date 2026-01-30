@@ -21,7 +21,7 @@ var connection = mysql.createConnection({
     password : process.env.AIVEN_MYSQL_PASSWORD,
     database : process.env.AIVEN_MYSQL_DBNAME	
 }); 
-connection.connect();
+connection.connect(); 
 
 
 connection.on('error', function(err) {
