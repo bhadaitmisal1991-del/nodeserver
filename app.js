@@ -22,6 +22,21 @@ var connection = mysql.createConnection({
     database : 'defaultdb'	
 });
 connection.connect();
+
+
+connection.on('error', function(err) {
+    console.error('Caught an error on the connection:', err.message);
+    // Implement logic to handle the specific error, e.g., reconnecting
+    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+        // Handle a lost connection, perhaps by attempting to re-establish
+        console.log('Connection lost. Attempting to reconnect...');
+        // ... add reconnection logic here ...
+    } else {
+        // Re-throw other errors if you cannot handle them
+        throw err;
+    }
+});
+
 // ***** GET Items DATA ******
  app.get('/api/GetItemsData', function(req, res) {    
        connection.query('select * from items',function(err, result){
