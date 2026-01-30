@@ -16,10 +16,10 @@ app.use(bodyParser.json());                                     // parse applica
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
 var connection = mysql.createConnection({
-    host : AIVEN_MYSQL_HOST,
-    user : AIVEN_MYSQL_USER,
-    password : AIVEN_MYSQL_PASSWORD,
-    database : AIVEN_MYSQL_DBNAME	
+    host : process.env.AIVEN_MYSQL_HOST,
+    user : process.env.AIVEN_MYSQL_USER,
+    password : process.env.AIVEN_MYSQL_PASSWORD,
+    database : process.env.AIVEN_MYSQL_DBNAME	
 }); 
 connection.connect();
 
