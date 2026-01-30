@@ -3,6 +3,7 @@ var cors = require('cors')
 var bodyParser = require("body-parser"); //Used to parse the request and send our response to client
 var path = require("path");
 var mysql = require('mysql');
+const fs = require('fs');
 const { networkInterfaces } = require('os');
 
 const nodemailer = require("nodemailer");
@@ -15,11 +16,16 @@ app.use(bodyParser.urlencoded({'extended':'true'}));            // parse applica
 app.use(bodyParser.json());                                     // parse application/json
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
+
 var connection = mysql.createConnection({
     host : process.env.AIVEN_MYSQL_HOST,
     user : process.env.AIVEN_MYSQL_USER,
     password : process.env.AIVEN_MYSQL_PASSWORD,
-    database : process.env.AIVEN_MYSQL_DBNAME	
+    database : process.env.AIVEN_MYSQL_DBNAME,
+	ssl: {
+        // Read CA certificate from the file uploaded to Render
+        ca: fs.readFileSync(process.env.MYSQL_SSL_CA).toString() 
+    }
 }); 
 connection.connect(); 
 
