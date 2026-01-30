@@ -20,7 +20,7 @@ var connection = mysql.createConnection({
     user : AIVEN_MYSQL_USER,
     password : AIVEN_MYSQL_PASSWORD,
     database : AIVEN_MYSQL_DBNAME	
-});
+}); 
 connection.connect();
 
 
