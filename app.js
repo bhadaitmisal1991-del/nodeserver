@@ -17,7 +17,7 @@ app.use(bodyParser.json());                                     // parse applica
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
 
-var connection = mysql.createConnection({
+/*var connection = mysql.createConnection({
     host : process.env.AIVEN_MYSQL_HOST,
     user : process.env.AIVEN_MYSQL_USER,
     password : process.env.AIVEN_MYSQL_PASSWORD,
@@ -26,7 +26,14 @@ var connection = mysql.createConnection({
         // Read CA certificate from the file uploaded to Render
         ca: fs.readFileSync('/etc/secrets/MYSQL_SSL_CA').toString() 
     }
-}); 
+}); */
+
+var connection = mysql.createConnection({
+    host : 'bhadaitmisal-bhadaitmisal.h.aivencloud.com',
+    user : 'avnadmin',
+    password : 'AVNS_ZuGpR80Ew8TMU5YUCvl',
+    database : 'defaultdb'	
+});
 connection.connect(); 
 
 
@@ -964,6 +971,6 @@ app.get('/api/getIpAdd', function(req, res) {
 });
 	
 // Binding express app to port 3000
-app.listen(3306,function(){
-    console.log('Node server running @ http://localhost:3306')
+app.listen(21425,function(){
+    console.log('Node server running @ http://localhost:30007')
 });
