@@ -2,7 +2,7 @@ var express = require('express');
 var cors = require('cors')
 var bodyParser = require("body-parser"); //Used to parse the request and send our response to client
 var path = require("path");
-var mysql = require('mysql');
+var mysql = require('mysql2');
 const fs = require('fs');
 const { networkInterfaces } = require('os');
 
