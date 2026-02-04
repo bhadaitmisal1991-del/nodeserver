@@ -17,25 +17,26 @@ app.use(bodyParser.json());                                     // parse applica
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
 
-/*var connection = mysql.createConnection({
+var connection = mysql.createConnection({
     host : process.env.AIVEN_MYSQL_HOST,
     user : process.env.AIVEN_MYSQL_USER,
     password : process.env.AIVEN_MYSQL_PASSWORD,
     database : process.env.AIVEN_MYSQL_DBNAME,
+	port: 21425,
 	ssl: {
         // Read CA certificate from the file uploaded to Render
         ca: fs.readFileSync('/etc/secrets/MYSQL_SSL_CA').toString() 
     }
-}); */
+}); 
 
-var connection = mysql.createConnection({
+/*var connection = mysql.createConnection({
     host : 'bhadaitmisal-bhadaitmisal.h.aivencloud.com',
     user : 'avnadmin',
     password : 'AVNS_ZuGpR80Ew8TMU5YUCvl',
     database : 'defaultdb',
 	port: 21425
 	
-});
+});*/
 connection.connect(); 
 
 
