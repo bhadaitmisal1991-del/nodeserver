@@ -33,6 +33,8 @@ var connection = mysql.createConnection({
     user : 'avnadmin',
     password : 'AVNS_ZuGpR80Ew8TMU5YUCvl',
     database : 'defaultdb'	
+	port: 21425
+	
 });
 connection.connect(); 
 
