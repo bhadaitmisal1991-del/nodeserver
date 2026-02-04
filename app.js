@@ -48,6 +48,7 @@ connection.on('error', function(err) {
         // ... add reconnection logic here ...
     } else {
         // Re-throw other errors if you cannot handle them
+		console.log('Connection lost. Attempting to reconnect...'+err);
         throw err;
     }
 });
