@@ -28,15 +28,11 @@ app.use(bodyParser.json({ type: 'application/vnd.api+json' }));
     }
 }); */
 
-var privateKey = fs.readFileSync( 'privatekey.pem' );
-var certificate = fs.readFileSync( 'certificate.pem' );
-
 var connection = mysql.createConnection({
     host : 'bhadaitmisal-bhadaitmisal.h.aivencloud.com',
     user : 'avnadmin',
     password : 'AVNS_ZuGpR80Ew8TMU5YUCvl',
-    database : 'defaultdb',
-	port: 21425
+    database : 'defaultdb'
 	
 });
 connection.connect(); 
