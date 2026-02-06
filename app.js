@@ -64,6 +64,17 @@ connection.on('error', function(err) {
              res.json(result)
             })  
     });
+
+// ***** GET Dine In Items DATA ******
+ app.get('/api/GetDineInItemsData', function(req, res) {    
+       connection.query('select * from dineinitems',function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });
 	
 // ******* Add Menu Items *****
  app.post('/api/addBillingMenu', function(req, res) {    
