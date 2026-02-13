@@ -4,6 +4,7 @@ var bodyParser = require("body-parser"); //Used to parse the request and send ou
 var path = require("path");
 var mysql = require('mysql2');
 const fs = require('fs');
+const Razorpay = require('razorpay');
 const { networkInterfaces } = require('os');
 
 const nodemailer = require("nodemailer");
@@ -53,6 +54,32 @@ connection.on('error', function(err) {
         throw err;
     }
 });
+
+//******Razor Pay Implementation******
+const razorpay = new Razorpay({
+  key_id: 'process.env.key_id', 
+  key_secret: 'process.env.key_secret', 
+});
+
+app.post('/api/createOrder', async (req, res) => {
+  try {
+    const { amount, currency } = req.body;
+    const data = await razorpay.orders.create({
+      amount: amount * 100, // amount in paise
+      currency: currency,
+      receipt: 'RCP_ID' + Date.now(),
+    });
+    res.json({
+      amount: data.amount,
+      id: data.id
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).send('Error creating order');
+  }
+});
+
+//******Razor Pay Implementation******
 
 // ***** GET Items DATA ******
  app.get('/api/GetItemsData', function(req, res) {    
