@@ -68,6 +68,8 @@ app.post('/api/createOrder', async (req, res) => {
 	console.log(data.currency);
 	console.log(data.currency); */
     const { amount, currency } = req.body;
+	console.log(data.amount);
+	console.log(data.currency);
     const data = await razorpay.orders.create({
       amount: amount * 100, // amount in paise
       currency: currency,
