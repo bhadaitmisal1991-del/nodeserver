@@ -57,12 +57,16 @@ connection.on('error', function(err) {
 
 //******Razor Pay Implementation******
 const razorpay = new Razorpay({
-  key_id: 'process.env.key_id', 
-  key_secret: 'process.env.key_secret', 
+  key_id: process.env.key_id, 
+  key_secret: process.env.key_secret, 
 });
 
 app.post('/api/createOrder', async (req, res) => {
   try {
+	/*console.log(data.amount);
+	console.log(data.currency);
+	console.log(data.currency);
+	console.log(data.currency); */
     const { amount, currency } = req.body;
     const data = await razorpay.orders.create({
       amount: amount * 100, // amount in paise
