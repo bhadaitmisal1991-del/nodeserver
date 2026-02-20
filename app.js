@@ -66,8 +66,8 @@ app.post('/api/login', (req, res) => {
 
         const user = results[0];
 		console.log(user.password+" "+password+" "+email);
-		console.log(" valid "+bcrypt.compareSync(password, email));
-        const passwordIsValid = bcrypt.compareSync(password, email);
+		console.log(" valid "+bcrypt.compareSync(password, user.password));
+        const passwordIsValid = bcrypt.compareSync(password, user.password);
 
         if (!passwordIsValid) return res.status(401).send('Invalid password');
 
