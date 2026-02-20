@@ -65,9 +65,9 @@ app.post('/api/login', (req, res) => {
         if (err || results.length === 0) return res.status(401).send('User not found');
 
         const user = results[0];
-		console.log(user.password+" "+password);
-		console.log(" valid "+bcrypt.compareSync(password, user.password));
-        const passwordIsValid = bcrypt.compareSync(password, user.password);
+		console.log(user.password+" "+password+" "+email);
+		console.log(" valid "+bcrypt.compareSync(password, email));
+        const passwordIsValid = bcrypt.compareSync(password, email);
 
         if (!passwordIsValid) return res.status(401).send('Invalid password');
 
