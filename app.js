@@ -55,6 +55,25 @@ connection.on('error', function(err) {
     }
 });
 
+
+// Login Endpoint
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
+
+    connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+        if (err || results.length === 0) return res.status(401).send('User not found');
+
+        const user = results[0];
+        const passwordIsValid = bcrypt.compareSync(password, user.password);
+
+        if (!passwordIsValid) return res.status(401).send('Invalid password');
+
+        const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '1h' });
+        res.status(200).send({ auth: true, token: token });
+    });
+});	
+
+
 //******Razor Pay Implementation******
 const razorpay = new Razorpay({
   key_id: process.env.key_id, 
