@@ -67,9 +67,18 @@ app.post('/api/login', (req, res) => {
         const user = results[0];
 		console.log(user.password+" "+password+" "+email);
 		console.log(" valid "+bcrypt.compareSync(password, user.password));
-        const passwordIsValid = bcrypt.compareSync(password, user.password);
+       /* const passwordIsValid = bcrypt.compareSync(password, user.password);
 
-        if (!passwordIsValid) return res.status(401).send('Invalid password');
+        if (!passwordIsValid) return res.status(401).send('Invalid password');*/
+		
+		bcrypt.hash(password, 10, function(err, hash) {
+			if (err) { throw (err); }
+
+			bcrypt.compare(password, hash, function(err, result) {
+				if (err) { throw (err); }
+				console.log(result);
+			});
+		});
 
         const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '1h' });
         res.status(200).send({ auth: true, token: token });
