@@ -67,7 +67,7 @@ app.post('/api/register', (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, salt);
 
     // 2. Save the HASHED password to the database
-    db.query('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashedPassword], (err, result) => {
+    connection.query('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashedPassword], (err, result) => {
         if (err) {
             return res.status(500).send('Error registering user');
         }
