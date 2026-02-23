@@ -58,6 +58,22 @@ connection.on('error', function(err) {
 
 
 // Login Endpoint
+
+app.post('/api/register', (req, res) => {
+    const { email, password } = req.body;
+    
+    // 1. Generate a salt and hash the password
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(password, salt);
+
+    // 2. Save the HASHED password to the database
+    db.query('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashedPassword], (err, result) => {
+        if (err) {
+            return res.status(500).send('Error registering user');
+        }
+        res.status(201).send({ message: 'User created successfully!' });
+    });
+});
 app.post('/api/login', (req, res) => {
 console.log("LOGIINNNNNNNNN");
     const { email, password } = req.body;
@@ -68,8 +84,8 @@ console.log("LOGIINNNNNNNNN");
 
         const user = results[0];
 		console.log(email+" "+password+" "+user.password+" ");
-		console.log(" valid "+bcryptjs.compare(password, user.password));
-        const passwordIsValid = bcryptjs.compare(password, user.password);
+		console.log(" valid "+bcrypt.compareSync(password, user.password));
+        const passwordIsValid = bcrypt.compareSync(password, user.password);
 
         if (!passwordIsValid) return res.status(401).send('Invalid password');
 		
