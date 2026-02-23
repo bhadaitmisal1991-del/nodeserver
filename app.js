@@ -2,38 +2,109 @@ var express = require('express');
 var cors = require('cors')
 var bodyParser = require("body-parser"); //Used to parse the request and send our response to client
 var path = require("path");
-var mysql = require('mysql');
+var mysql = require('mysql2');
+const bcrypt = require('bcryptjs');
 const fs = require('fs');
+const Razorpay = require('razorpay');
 const { networkInterfaces } = require('os');
 
 const nodemailer = require("nodemailer");
 
 var app = express();
-app.use(cors())
+app.use(cors());
 
 app.use(express.static(__dirname + '/public'));
 app.use(bodyParser.urlencoded({'extended':'true'}));            // parse application/x-www-form-urlencoded
 app.use(bodyParser.json());                                     // parse application/json
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
+
 var connection = mysql.createConnection({
-    host : 'localhost',
-    user : 'root',
-    password : '',
-    database : 'bhadaitmisal'	
+    host : process.env.AIVEN_MYSQL_HOST,
+    user : process.env.AIVEN_MYSQL_USER,
+    password : process.env.AIVEN_MYSQL_PASSWORD,
+    database : process.env.AIVEN_MYSQL_DBNAME,
+	port: 21425,
+	ssl: {
+        // Read CA certificate from the file uploaded to Render
+        ca: fs.readFileSync('/etc/secrets/MYSQL_SSL_CA').toString() 
+    }
+}); 
+
+/*var connection = mysql.createConnection({
+    host : 'bhadaitmisal-bhadaitmisal.h.aivencloud.com',
+    user : 'avnadmin',
+    password : 'AVNS_ZuGpR80Ew8TMU5YUCvl',
+    database : 'defaultdb',
+	port: 21425
+	
+});*/
+connection.connect(); 
+
+
+connection.on('error', function(err) {
+    console.error('Caught an error on the connection:', err.message);
+    // Implement logic to handle the specific error, e.g., reconnecting
+    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+        // Handle a lost connection, perhaps by attempting to re-establish
+        console.log('Connection lost. Attempting to reconnect...');
+        // ... add reconnection logic here ...
+    } else {
+        // Re-throw other errors if you cannot handle them
+		console.log('Connection lost. Attempting to reconnect...'+err);
+        throw err;
+    }
 });
 
 
+// Login Endpoint
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
 
-connection.connect();
+    connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+	console.log(results+" Result-- "+results[0])
+        if (err || results.length === 0) return res.status(401).send('User not found');
 
-connection.on('error', function (err) {
-  console.error('Caught an error on the connection:', err);
-  // You might want to add additional logic here, such as:
-  // * Logging the error to a file or monitoring service
-  // * Attempting to re-establish the connection
-  // * Terminating the application in a controlled manner if the error is fatal
+        const user = results[0];
+		console.log(email+" "password+" "+user.password+" ");
+		console.log(" valid "+bcrypt.compareSync(password, user.password));
+        const passwordIsValid = bcrypt.compareSync(password, user.password);
+
+        if (!passwordIsValid) return res.status(401).send('Invalid password');
+		
+
+        const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '1h' });
+        res.status(200).send({ auth: true, token: token });
+    });
+});	
+
+
+//******Razor Pay Implementation******
+const razorpay = new Razorpay({
+  key_id: process.env.key_id, 
+  key_secret: process.env.key_secret, 
 });
+
+app.post('/api/createOrder', async (req, res) => {
+  try {
+    const { amount, currency } = req.body;
+    const data = await razorpay.orders.create({
+      amount: amount * 100, // amount in paise
+      currency: currency,
+      receipt: 'RCP_ID' + Date.now(),
+    });
+    res.json({
+      amount: data.amount,
+      id: data.id
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).send('Error creating order');
+  }
+});
+
+//******Razor Pay Implementation******
+
 // ***** GET Items DATA ******
  app.get('/api/GetItemsData', function(req, res) {    
        connection.query('select * from items',function(err, result){
@@ -44,26 +115,17 @@ connection.on('error', function (err) {
              res.json(result)
             })  
     });
-	
-	
 
-	
-// Login Endpoint
-app.post('/api/login', (req, res) => {
-    const { email, password } = req.body;
-
-    connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
-        if (err || results.length === 0) return res.status(401).send('User not found');
-
-        const user = results[0];
-        const passwordIsValid = bcrypt.compareSync(password, user.password);
-
-        if (!passwordIsValid) return res.status(401).send('Invalid password');
-
-        const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '1h' });
-        res.status(200).send({ auth: true, token: token });
+// ***** GET Dine In Items DATA ******
+ app.get('/api/GetDineInItemsData', function(req, res) {    
+       connection.query('select * from dineinitems',function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
     });
-});	
 	
 // ******* Add Menu Items *****
  app.post('/api/addBillingMenu', function(req, res) {    
@@ -973,8 +1035,8 @@ app.get('/api/getIpAdd', function(req, res) {
 	 }
 	res.json(addresses);  
 });
-	
+	const port = process.env.PORT || 3000;
 // Binding express app to port 3000
-app.listen(3000,function(){
-    console.log('Node server running @ http://localhost:3000')
+app.listen(port, '0.0.0.0',function(){
+    console.log(`Node server running @ ${port}`)
 });
