@@ -91,7 +91,7 @@ console.log("LOGIINNNNNNNNN");
         if (!passwordIsValid) return res.status(401).send('Invalid password');
 		
 
-        const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.status(200).send({ auth: true, token: token });
     });
 });	
