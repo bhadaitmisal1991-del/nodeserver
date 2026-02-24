@@ -574,8 +574,8 @@ app.get('/api/getEmpDueRecords', function(req, res) {
 
 
 // ***** Add Sales Calculation ******
-app.post('/api/addSaleCalculation', function(req, res) { 
-	connection.query('INSERT INTO saleCalculation SET ?', req.body, function(err, result) {
+app.post('/api/addSalecalculation', function(req, res) { 
+	connection.query('INSERT INTO salecalculation SET ?', req.body, function(err, result) {
    // Neat!
     if(err) throw err;
 		res.json(result);
