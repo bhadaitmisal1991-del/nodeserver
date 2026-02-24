@@ -76,7 +76,6 @@ app.post('/api/register', (req, res) => {
     });
 });
 app.post('/api/login', (req, res) => {
-console.log("LOGIINNNNNNNNN");
     const { email, password } = req.body;
 
     connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
@@ -125,7 +124,7 @@ app.post('/api/createOrder', async (req, res) => {
 
 // ***** GET Items DATA ******
  app.get('/api/GetItemsData', function(req, res) {    
-       connection.query('select * from items',function(err, result){
+       connection.query('select * from parcelitems',function(err, result){
              if (err){
                 res.send(err);
                 console.log(err);
