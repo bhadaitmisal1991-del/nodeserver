@@ -179,7 +179,7 @@ var tmpdate = req.query.date;
  app.post('/api/add', function(req, res) {
 connection.query('INSERT INTO bills SET ?', req.body, function(err, result) {
     if(err) throw err;
-    res.json(result);
+    res.json("{'response':'success'}");
  });
      
     });
