@@ -79,12 +79,9 @@ app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
 
     connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
-	console.log(results[0].email+" Result-- "+results[0].password)
         if (err || results.length === 0) return res.status(401).send('User not found');
 
         const user = results[0];
-		console.log(email+" "+password+" "+user.password+" ");
-		console.log(" valid "+bcrypt.compareSync(password, user.password));
         const passwordIsValid = bcrypt.compareSync(password, user.password);
 
         if (!passwordIsValid) return res.status(401).send('Invalid password');
