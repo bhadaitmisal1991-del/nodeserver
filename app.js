@@ -144,6 +144,17 @@ app.post('/api/createOrder', async (req, res) => {
             })  
     });
 	
+// ***** GET MasterMenu Items DATA ******
+ app.get('/api/GetMasterItemsData', function(req, res) {    
+       connection.query('select * from masteritems',function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });
+	
 // ******* Add Menu Items *****
  app.post('/api/addBillingMenu', function(req, res) {    
 connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
