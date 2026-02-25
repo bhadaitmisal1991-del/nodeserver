@@ -161,7 +161,7 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 });	
 	
 // ***** GET BillNo ******
- app.get('/api/billno', async(req, res) {  
+ app.get('/api/billno', async(req, res) => {  
 var tmpdate = req.query.date; 
 const shouldRunSecond = req.query.isToken === 'true'; // Your condition	
 	
