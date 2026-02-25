@@ -210,7 +210,7 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 		  }*/
 		
 		
-		connection.query("SELECT * FROM bills where date='"+tmpdate+"' and ORDER BY billno DESC LIMIT 1",function(err, result1){
+		connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result1){
              if (err){
                 res.send(err);
                 console.log(err);
