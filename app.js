@@ -162,35 +162,36 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 	
 // ***** GET BillNo ******
  app.get('/api/billno', function(req, res) {  
-var tmpdate = req.query.date;
-var isToken = req.query.isToken;
-var resultObj;  
-       connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
+var tmpdate = req.query.date; 
+
+		const query1 = "SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1";
+		const query2 = "SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1";
+		try {
+			const [[data1], [data2]] = await Promise.all([
+			  connection.query(query1),
+			  connection.query(query2)
+			]);
+			
+			res.status(200).json({
+			  success: true,
+			  data1: data1,
+			  data2: data2
+			});
+		} catch (err) {
+			res.status(500).json({ 
+				success: false, 
+				message: "Could not retrieve complete data set",
+				technicalDetails: err.message 
+			  });
+		}
+		
+       /*connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
              if (err){
                 res.send(err);
                 console.log(err);
              }
-			 resultObj = result;
-					if(isToken=="true"){
-					    console.log("Token On"+isToken);
-						//**
-						 connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result2){
-						 if (err){
-							res.send(err);
-							console.log(err);
-						 }			 
-						 res.json({ data1: resultObj, data2: result2 });
-						 //res.json(result)
-						})
-						//****
-					}else{
-						 console.log("Token Off");
-						res.json({ data1: resultObj, data2: {} });
-					}
-					
-			 
-             //res.json(result)
-            })  
+             res.json(result)
+            })  */
 });	
 	
 // ******* Add items into bills table *****
