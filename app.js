@@ -225,7 +225,7 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 					 res.json({ data1: result1, data2: result2 });
 				 });
 			 }else{
-				res.json({ data1: result1, data2: result2 });
+				res.json({ data1: result1, data2: null });
 			 }
 			 
 			 
