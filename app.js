@@ -163,27 +163,29 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 // ***** GET BillNo ******
  app.get('/api/billno', function(req, res) {  
 var tmpdate = req.query.date;
-var isToken = req.query.isToken;  
-       connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result1){
+var isToken = req.query.isToken;
+var resultObj;  
+       connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
              if (err){
                 res.send(err);
                 console.log(err);
              }
-					if(isToken=="true"){
-					    console.log("Token On");
+			 resultObj = result;
+					if(isToken){
+					    console.log("Token On"+isToken);
 						//**
 						 connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result2){
 						 if (err){
 							res.send(err);
 							console.log(err);
 						 }			 
-						 res.send({ data1: result1, data2: result2 });
+						 res.send({ data1: resultObj, data2: result2 });
 						 //res.json(result)
 						})
 						//****
 					}else{
 						 console.log("Token Off");
-						res.send({ data1: result1, data2: {} });
+						res.send({ data1: resultObj, data2: {} });
 					}
 					
 			 
