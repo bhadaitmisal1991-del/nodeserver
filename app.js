@@ -210,12 +210,26 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 		  }*/
 		
 		
-		connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
+		connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result1){
              if (err){
                 res.send(err);
                 console.log(err);
              }
-             res.json(result)
+			 if(req.query.isToken=="false"){
+					connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result2){
+					 if (err){
+						res.send(err);
+						console.log(err);
+					 }
+					 
+					 res.json({ data1: result1, data2: result2 });
+				 });
+			 }else{
+				res.json({ data1: result1, data2: result2 });
+			 }
+			 
+			 
+             
             })
 		
 		
