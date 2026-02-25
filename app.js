@@ -163,7 +163,7 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 // ***** GET BillNo ******
  app.get('/api/billno', function(req, res) {  
 var tmpdate = req.query.date; 
-       connection.query("SELECT * FROM bills where date='"+tmpdate+"' and waitername=='' ORDER BY billno DESC LIMIT 1",function(err, result){
+       connection.query("SELECT * FROM bills where date='"+tmpdate+"' and waitername='' ORDER BY billno DESC LIMIT 1",function(err, result){
              if (err){
                 res.send(err);
                 console.log(err);
