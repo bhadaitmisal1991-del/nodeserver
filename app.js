@@ -179,13 +179,13 @@ var resultObj;
 							res.send(err);
 							console.log(err);
 						 }			 
-						 res.send({ data1: resultObj, data2: result2 });
+						 res.json({ data1: resultObj, data2: result2 });
 						 //res.json(result)
 						})
 						//****
 					}else{
 						 console.log("Token Off");
-						res.send({ data1: resultObj, data2: {} });
+						res.json({ data1: resultObj, data2: {} });
 					}
 					
 			 
