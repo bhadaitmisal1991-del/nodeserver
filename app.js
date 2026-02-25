@@ -171,7 +171,7 @@ var resultObj;
                 console.log(err);
              }
 			 resultObj = result;
-					if(isToken){
+					if(isToken=="true"){
 					    console.log("Token On"+isToken);
 						//**
 						 connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result2){
