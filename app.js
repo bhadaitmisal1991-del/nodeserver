@@ -164,7 +164,7 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
  app.get('/api/billno', function(req, res)  {  
 var tmpdate = req.query.date; 
 const includeLogs = req.query.isToken === 'true'; // Your condition
-		connection.query("SELECT * FROM bills where date='"+tmpdate+"'ORDER BY billno DESC LIMIT 1",function(err, data1){
+		/*connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, data1){
              if (err){
                 return res.status(500).json({ error: "Query 1 failed", details: err1 });
              }
@@ -187,7 +187,7 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 			 
 			 
             // res.json(result)
-            });
+            });*/
 
 		
 	
@@ -209,6 +209,14 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 			res.status(500).json({ error: error.message });
 		  }*/
 		
+		
+		connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })
 		
 		
        /*connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
