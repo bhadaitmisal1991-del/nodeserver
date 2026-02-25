@@ -163,27 +163,27 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 // ***** GET BillNo ******
  app.get('/api/billno', function(req, res) {  
 var tmpdate = req.query.date; 
-
-		const query1 = "SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1";
-		const query2 = "SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1";
-		try {
-			const [[data1], [data2]] = await Promise.all([
-			  connection.query(query1),
-			  connection.query(query2)
-			]);
+const shouldRunSecond = req.query.isToken === 'true'; // Your condition	
+	
+	try {
+			const query1 = connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1");
 			
-			res.status(200).json({
-			  success: true,
-			  data1: data1,
-			  data2: data2
+			// 2. Second query ONLY starts if flag is true, otherwise returns a "fake" promise
+			const query2 = shouldRunSecond 
+			? connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1") 
+			: Promise.resolve([null]); // Returns an array with null to match mysql2 format
+			
+			const [result1, result2] = await Promise.all([query1, query2]);
+			
+			res.json({
+			  data1: result1[0],
+			  data2: shouldRunSecond ? result2[0] : "Query skipped by flag"
 			});
-		} catch (err) {
-			res.status(500).json({ 
-				success: false, 
-				message: "Could not retrieve complete data set",
-				technicalDetails: err.message 
-			  });
-		}
+		} catch (error) {
+			res.status(500).json({ error: error.message });
+		  }
+		
+		
 		
        /*connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
              if (err){
