@@ -168,7 +168,7 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
              if (err){
                 return res.status(500).json({ error: "Query 1 failed", details: err1 });
              }
-			 
+			 console.log(JSON.stringify(data1));
 			 // 2. Check the flag
 			if (includeLogs) {
 			  // 3. Run the second query inside the first callback
@@ -176,7 +176,7 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 				if (err2) {
 				  return res.status(500).json({ error: "Query 2 failed", details: err2 });
 				}
-
+					console.log(JSON.stringify(data2));
 				// Send combined result if both succeeded
 				res.json({ data1: data1, data2: data2 });
 			  });
