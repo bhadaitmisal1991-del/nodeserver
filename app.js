@@ -161,11 +161,37 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 });	
 	
 // ***** GET BillNo ******
- app.get('/api/billno', async(req, res) => {  
+ app.get('/api/billno', function(req, res)  {  
 var tmpdate = req.query.date; 
-const shouldRunSecond = req.query.isToken === 'true'; // Your condition	
+const includeLogs = req.query.isToken === 'true'; // Your condition
+		connection.query("SELECT * FROM bills where date='"+tmpdate+"'ORDER BY billno DESC LIMIT 1",function(err, data1){
+             if (err){
+                return res.status(500).json({ error: "Query 1 failed", details: err1 });
+             }
+			 
+			 // 2. Check the flag
+			if (includeLogs) {
+			  // 3. Run the second query inside the first callback
+			  connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1", (err2, data2) => {
+				if (err2) {
+				  return res.status(500).json({ error: "Query 2 failed", details: err2 });
+				}
+
+				// Send combined result if both succeeded
+				res.json({ data1: data1, data2: data2 });
+			  });
+			} else {
+			  // 4. If flag is false, send result with just data1
+			  res.json({ data1: data1, data2: null });
+			}
+			 
+			 
+            // res.json(result)
+            });
+
+		
 	
-	try {
+	/*try {
 			const query1 = connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1");
 			
 			// 2. Second query ONLY starts if flag is true, otherwise returns a "fake" promise
@@ -181,7 +207,7 @@ const shouldRunSecond = req.query.isToken === 'true'; // Your condition
 			});
 		} catch (error) {
 			res.status(500).json({ error: error.message });
-		  }
+		  }*/
 		
 		
 		
