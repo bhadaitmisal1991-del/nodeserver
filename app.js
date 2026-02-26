@@ -244,12 +244,14 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 	
 // ******* Add items into bills table *****
  app.post('/api/add', function(req, res) {
-connection.query('INSERT INTO bills SET ?', req.body, function(err, result) {
+ 
+ console.log("INSERT INTO bills SET ?"+req.body);
+connection.query("INSERT INTO bills SET ?", req.body, function(err, result) {
     if(err) throw err;
     res.json("{'response':'success'}");
- });
+	});
      
-    });
+});
 	
 // ***** GET item wise sale report ******
  app.get('/api/todaysReport', function(req, res) {  
