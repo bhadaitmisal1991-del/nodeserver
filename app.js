@@ -163,53 +163,6 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 // ***** GET BillNo ******
  app.get('/api/billno', function(req, res)  {  
 var tmpdate = req.query.date; 
-const includeLogs = req.query.isToken === 'true'; // Your condition
-		/*connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, data1){
-             if (err){
-                return res.status(500).json({ error: "Query 1 failed", details: err1 });
-             }
-			 console.log(JSON.stringify(data1));
-			 // 2. Check the flag
-			if (includeLogs) {
-			  // 3. Run the second query inside the first callback
-			  connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1", (err2, data2) => {
-				if (err2) {
-				  return res.status(500).json({ error: "Query 2 failed", details: err2 });
-				}
-					console.log(JSON.stringify(data2));
-				// Send combined result if both succeeded
-				res.json({ data1: data1, data2: data2 });
-			  });
-			} else {
-			  // 4. If flag is false, send result with just data1
-			  res.json({ data1: data1, data2: null });
-			}
-			 
-			 
-            // res.json(result)
-            });*/
-
-		
-	
-	/*try {
-			const query1 = connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1");
-			
-			// 2. Second query ONLY starts if flag is true, otherwise returns a "fake" promise
-			const query2 = shouldRunSecond 
-			? connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1") 
-			: Promise.resolve([null]); // Returns an array with null to match mysql2 format
-			
-			const [result1, result2] = await Promise.all([query1, query2]);
-			
-			res.json({
-			  data1: result1[0],
-			  data2: shouldRunSecond ? result2[0] : "Query skipped by flag"
-			});
-		} catch (error) {
-			res.status(500).json({ error: error.message });
-		  }*/
-		
-		
 		connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result1){
              if (err){
                 res.send(err);
@@ -244,8 +197,6 @@ const includeLogs = req.query.isToken === 'true'; // Your condition
 	
 // ******* Add items into bills table *****
  app.post('/api/add', function(req, res) {
- 
- console.log("INSERT INTO bills SET ?"+req.body);
 connection.query("INSERT INTO bills SET ?", req.body, function(err, result) {
     if(err) throw err;
     res.json("{'response':'success'}");
