@@ -922,7 +922,7 @@ var tableNo = req.query.tableNo;
 // ***** GET all Kitchen Orders ******
  app.get('/api/getAllKitchenOrders', function(req, res) {  
 //var tableNo = req.query.tableNo; 
-       connection.query("SELECT * FROM bills where foodstatus='preparing' and and waitername='"+req.query.waiterName+"' ORDER BY bill_id",function(err, result){
+       connection.query("SELECT * FROM bills where foodstatus='preparing' and  waitername='"+req.query.waiterName+"' ORDER BY bill_id",function(err, result){
 
              if (err){
                 res.send(err);
