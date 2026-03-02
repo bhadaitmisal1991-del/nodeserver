@@ -907,8 +907,8 @@ var tableNo = req.query.tableNo;
 
 // ***** GET all Kitchen Orders table 500 ie customer parcel******
  app.get('/api/getOrdersByDate', function(req, res) {  
-var tableNo = req.query.tableNo; 
-       connection.query("SELECT * FROM bills where date='"+req.query.date+"' and tableNo='500' and foodstatus!='' ORDER BY bill_id",function(err, result){
+//var tableNo = req.query.tableNo; 
+       connection.query("SELECT * FROM bills where date='"+req.query.date+"' and waitername='"+req.query.waiterName+"' and foodstatus!='' ORDER BY bill_id",function(err, result){
 
              if (err){
                 res.send(err);
@@ -921,8 +921,8 @@ var tableNo = req.query.tableNo;
 
 // ***** GET all Kitchen Orders ******
  app.get('/api/getAllKitchenOrders', function(req, res) {  
-var tableNo = req.query.tableNo; 
-       connection.query("SELECT * FROM bills where foodstatus='preparing' ORDER BY bill_id",function(err, result){
+//var tableNo = req.query.tableNo; 
+       connection.query("SELECT * FROM bills where foodstatus='preparing' and and waitername='"+req.query.waiterName+"' ORDER BY bill_id",function(err, result){
 
              if (err){
                 res.send(err);
