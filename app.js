@@ -908,7 +908,7 @@ var tableNo = req.query.tableNo;
 // ***** GET all Kitchen Orders table 500 ie customer parcel******
  app.get('/api/getOrdersByDate', function(req, res) {  
 var tableNo = req.query.tableNo; 
-       connection.query("SELECT * FROM bills where date='"+req.query.date+"' and tableNo='500' and foodstatus='preparing' ORDER BY bill_id",function(err, result){
+       connection.query("SELECT * FROM bills where date='"+req.query.date+"' and tableNo='500' and foodstatus!='' ORDER BY bill_id",function(err, result){
 
              if (err){
                 res.send(err);
