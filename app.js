@@ -1070,7 +1070,7 @@ app.post('/api/clearPendingOrder', function(req, res) {
 
 // ***** UPDATE restaurant info ******
 app.post('/api/updateResturantInfo', function(req, res) {      
-	connection.query('UPDATE restaurantInfo SET dinein_online = ?, parcel_online = ? WHERE id = 1', [req.body.vName, req.body.dineinOnline, req.body.parcelOnline], 
+	connection.query('UPDATE restaurantInfo SET dinein_online = ?, parcel_online = ? WHERE id = 1', [ req.body.dineinOnline, req.body.parcelOnline], 
 	function(err, result){
         if(err) throw err;
         res.json(result);
