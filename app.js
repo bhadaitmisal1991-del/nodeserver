@@ -1057,7 +1057,7 @@ app.post('/api/clearPendingOrder', function(req, res) {
 
 // ***** GET restaurant Info  ******
  app.get('/api/restaurantInfo', function(req, res) {  
-       connection.query("SELECT online FROM restaurantInfo",function(err, result){
+       connection.query("SELECT dinein_online, parcel_online FROM restaurantInfo",function(err, result){
 
              if (err){
                 res.send(err);
