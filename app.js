@@ -1039,9 +1039,6 @@ app.post('/api/updatePendingOrders', function(req, res) {
 
 // ***** Clear Bills Data- Delete Data ******
 app.post('/api/clearBills', function(req, res) { 
-
-	console.log("Date-000---- "); 
-	console.log("Date-000 "+req.body.date); 
 	connection.query('DELETE from bills WHERE date != ?', [req.body.date], 
 	function(err, result){
         if(err) throw err;
