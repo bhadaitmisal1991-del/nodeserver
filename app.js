@@ -145,7 +145,7 @@ app.post('/api/createOrder', async (req, res) => {
 
 // ***** GET Items DATA ******
  app.get('/api/GetItemsData', function(req, res) {    
-       connection.query('select * from parcelitems',authenticateToken ,function(err, result){
+       connection.query('select * from parcelitems',function(err, result){
              if (err){
                 res.send(err);
                 console.log(err);
@@ -958,7 +958,7 @@ var tableNo = req.query.tableNo;
     });	
 
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/markOrderReady', authenticateToken, function(req, res) { 
+app.post('/api/markOrderReady', function(req, res) { 
 	 var foodready  = 'ready',  foodpreparing = 'preparing';	 
 	connection.query('UPDATE bills SET foodstatus = ? WHERE billno = ? AND foodstatus = ?', [foodready, req.body.billno, foodpreparing], 
 	function(err, result){
@@ -968,7 +968,7 @@ app.post('/api/markOrderReady', authenticateToken, function(req, res) {
 });
 	
 // ***** GET all unpaid Orders ******	
- app.get('/api/getAllUnpaidOrders', authenticateToken, function(req, res) {
+ app.get('/api/getAllUnpaidOrders', function(req, res) {
        connection.query("SELECT tableno, foodstatus FROM bills where billstatus='unpaid' ORDER BY billno",function(err, result){
 
              if (err){
@@ -980,7 +980,7 @@ app.post('/api/markOrderReady', authenticateToken, function(req, res) {
 });
 	
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/paidTableBill', authenticateToken, function(req, res) {
+app.post('/api/paidTableBill', function(req, res) {
 	 var billStatus  = 'paid';
 	 
 	connection.query('UPDATE bills SET billstatus = ? WHERE billno = ?', [billStatus, req.body.billno], 
@@ -992,7 +992,7 @@ app.post('/api/paidTableBill', authenticateToken, function(req, res) {
 });
 
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/removeBillItem', authenticateToken, function(req, res) { 	 
+app.post('/api/removeBillItem', function(req, res) { 	 
 	connection.query('DELETE from bills WHERE bill_id = ?', [req.body.bill_id], 
 	function(err, result){
         if(err) throw err;
@@ -1002,7 +1002,7 @@ app.post('/api/removeBillItem', authenticateToken, function(req, res) {
 
 
 // ***** Add pending Orders - Bhaji Vadi Coffee******	
-app.post('/api/addPendingOrders', authenticateToken, function(req, res) {  
+app.post('/api/addPendingOrders', function(req, res) {  
 	var inserts = [];
 	if(Number(req.body.qty_bhaji)>0)
 		inserts.push(['B', Number(req.body.qty_bhaji), req.body.cName, req.body.status, req.body.date]);
@@ -1020,7 +1020,7 @@ app.post('/api/addPendingOrders', authenticateToken, function(req, res) {
 });
 
 // ***** GET all pending Orders - Bhaji Vadi Coffee ******	
- app.get('/api/getAllPendingOrders', authenticateToken, function(req, res) {  
+ app.get('/api/getAllPendingOrders', function(req, res) {  
 
        connection.query("SELECT id, itemName, cName, qty FROM orders where date='"+req.query.date+"' AND status='P' ORDER BY status",function(err, result){
 
@@ -1033,7 +1033,7 @@ app.post('/api/addPendingOrders', authenticateToken, function(req, res) {
 
 
 // ***** Mark Pending Order Ready - Bhaji Vadi Coffee ******
-app.post('/api/markPendingOrderReady', authenticateToken, function(req, res) { 
+app.post('/api/markPendingOrderReady', function(req, res) { 
 	 var status  = 'R';	 
 	connection.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.body.id], 
 	function(err, result){
@@ -1044,7 +1044,7 @@ app.post('/api/markPendingOrderReady', authenticateToken, function(req, res) {
 });
 
 // ***** UPDATE Pending Orders DATA - Bhaji Vadi Coffee******
-app.post('/api/updatePendingOrders', authenticateToken, function(req, res) {
+app.post('/api/updatePendingOrders', function(req, res) {
 	
 	  var tmpQty = 0;
 	  if(req.body.qty_bhaji!=undefined){
@@ -1062,7 +1062,7 @@ app.post('/api/updatePendingOrders', authenticateToken, function(req, res) {
 });
 
 // ***** Clear Bills Data- Delete Data ******
-app.post('/api/clearBills', authenticateToken, function(req, res) { 
+app.post('/api/clearBills', function(req, res) { 
 	connection.query('DELETE from bills WHERE date != ?', [req.body.date], 
 	function(err, result){
         if(err) throw err;
@@ -1071,7 +1071,7 @@ app.post('/api/clearBills', authenticateToken, function(req, res) {
 });
 
 // ***** Clear Pending Orders- Delete Data ******
-app.post('/api/clearPendingOrder', authenticateToken, function(req, res) { 
+app.post('/api/clearPendingOrder', function(req, res) { 
 	connection.query('DELETE from orders WHERE date != ?', [req.body.date], 
 	function(err, result){
         if(err) throw err;
@@ -1080,7 +1080,7 @@ app.post('/api/clearPendingOrder', authenticateToken, function(req, res) {
 });
 
 // ***** GET restaurant Info  ******
- app.get('/api/restaurantInfo', authenticateToken, function(req, res) {  
+ app.get('/api/restaurantInfo', function(req, res) {  
        connection.query("SELECT dinein_online, parcel_online FROM restaurantInfo",function(err, result){
 
              if (err){
@@ -1093,7 +1093,7 @@ app.post('/api/clearPendingOrder', authenticateToken, function(req, res) {
 });
 
 // ***** UPDATE restaurant info ******
-app.post('/api/updateResturantInfo', authenticateToken, function(req, res) {      
+app.post('/api/updateResturantInfo', function(req, res) {      
 	connection.query('UPDATE restaurantInfo SET dinein_online = ?, parcel_online = ? WHERE id = 1', [ ""+req.body.dineinOnline+"", ""+req.body.parcelOnline+""], 
 	function(err, result){
         if(err) throw err;
@@ -1105,7 +1105,7 @@ app.post('/api/updateResturantInfo', authenticateToken, function(req, res) {
 
 
 //Get IpAddress
-app.get('/api/getIpAdd', authenticateToken, function(req, res) {
+app.get('/api/getIpAdd', function(req, res) {
    var os = require('os'),
      interfaces = os.networkInterfaces(),
      address,
