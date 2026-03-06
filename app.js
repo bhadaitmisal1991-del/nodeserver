@@ -93,6 +93,30 @@ app.post('/api/login', (req, res) => {
 });	
 
 
+
+// --- Authentication Middleware: Verify Token ---
+const authenticateToken = (req, res, next) => {
+    // Get the token from the 'Authorization' header
+    // The header format is typically "Bearer TOKEN"
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Extract the token part
+
+    if (token == null) {
+        return res.sendStatus(401); // If no token, unauthorized
+    }
+
+    // Verify the token's authenticity with the secret key
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.sendStatus(403); // If token is invalid or expired, forbidden
+        }
+        req.user = user; // Add the decoded user payload to the request object
+        next(); // Proceed to the next middleware or route handler
+    });
+};
+
+
+
 //******Razor Pay Implementation******
 const razorpay = new Razorpay({
   key_id: process.env.key_id, 
@@ -121,7 +145,7 @@ app.post('/api/createOrder', async (req, res) => {
 
 // ***** GET Items DATA ******
  app.get('/api/GetItemsData', function(req, res) {    
-       connection.query('select * from parcelitems',function(err, result){
+       connection.query('select * from parcelitems',authenticateToken ,function(err, result){
              if (err){
                 res.send(err);
                 console.log(err);
