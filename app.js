@@ -143,8 +143,8 @@ app.post('/api/createOrder', async (req, res) => {
 
 //******Razor Pay Implementation******
 
-// ***** GET Items DATA ******
- app.get('/api/GetItemsData', authenticateToken, function(req, res) {    
+// ***** GET Items PArcel Menu DATA ******
+ app.get('/api/GetItemsData', function(req, res) {    
        connection.query('select * from parcelitems',function(err, result){
              if (err){
                 res.send(err);
@@ -155,7 +155,7 @@ app.post('/api/createOrder', async (req, res) => {
     });
 
 // ***** GET Dine In Items DATA ******
- app.get('/api/GetDineInItemsData', authenticateToken, function(req, res) {    
+ app.get('/api/GetDineInItemsData', function(req, res) {    
        connection.query('select * from dineinitems',function(err, result){
              if (err){
                 res.send(err);
@@ -185,7 +185,7 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 });	
 	
 // ***** GET BillNo ******
- app.get('/api/billno', authenticateToken, function(req, res)  {  
+ app.get('/api/billno', function(req, res)  {  
 var tmpdate = req.query.date; 
 		connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result1){
              if (err){
@@ -208,7 +208,7 @@ var tmpdate = req.query.date;
 });	
 	
 // ******* Add items into bills table *****
- app.post('/api/add', authenticateToken, function(req, res) {
+ app.post('/api/add', function(req, res) {
 connection.query("INSERT INTO bills SET ?", req.body, function(err, result) {
     if(err) throw err;
     res.json("{'response':'success'}");
