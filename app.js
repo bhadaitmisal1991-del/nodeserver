@@ -1050,7 +1050,7 @@ app.post('/api/clearPendingOrder', authenticateToken, function(req, res) {
 });
 
 // ***** GET restaurant Info  ******
- app.get('/api/restaurantInfo', authenticateToken, function(req, res) {  
+ app.get('/api/restaurantInfo', function(req, res) {  
        connection.query("SELECT dinein_online, parcel_online FROM restaurantInfo",function(err, result){
 
              if (err){
