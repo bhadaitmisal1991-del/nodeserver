@@ -87,7 +87,7 @@ app.post('/api/login', (req, res) => {
         if (!passwordIsValid) return res.status(401).send('Invalid password');
 		
 
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
     });
 });	
@@ -144,7 +144,7 @@ app.post('/api/createOrder', async (req, res) => {
 //******Razor Pay Implementation******
 
 // ***** GET Items DATA ******
- app.get('/api/GetItemsData', function(req, res) {    
+ app.get('/api/GetItemsData', authenticateToken, function(req, res) {    
        connection.query('select * from parcelitems',function(err, result){
              if (err){
                 res.send(err);
@@ -155,7 +155,7 @@ app.post('/api/createOrder', async (req, res) => {
     });
 
 // ***** GET Dine In Items DATA ******
- app.get('/api/GetDineInItemsData', function(req, res) {    
+ app.get('/api/GetDineInItemsData', authenticateToken, function(req, res) {    
        connection.query('select * from dineinitems',function(err, result){
              if (err){
                 res.send(err);
@@ -166,7 +166,7 @@ app.post('/api/createOrder', async (req, res) => {
     });
 	
 // ***** GET MasterMenu Items DATA ******
- app.get('/api/GetMasterItemsData', function(req, res) {    
+ app.get('/api/GetMasterItemsData', authenticateToken, function(req, res) {    
        connection.query('select * from masteritems',function(err, result){
              if (err){
                 res.send(err);
@@ -177,7 +177,7 @@ app.post('/api/createOrder', async (req, res) => {
     });
 	
 // ******* Add Menu Items *****
- app.post('/api/addBillingMenu', function(req, res) {    
+ app.post('/api/addBillingMenu', authenticateToken, function(req, res) {    
 connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
     if(err) throw err;
     res.json(result);
@@ -185,7 +185,7 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 });	
 	
 // ***** GET BillNo ******
- app.get('/api/billno', function(req, res)  {  
+ app.get('/api/billno', authenticateToken, function(req, res)  {  
 var tmpdate = req.query.date; 
 		connection.query("SELECT * FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result1){
              if (err){
@@ -204,23 +204,11 @@ var tmpdate = req.query.date;
 			 }else{
 				res.json({ data1: result1, data2: null });
 			 }
-			 
-			 
-             
-            })
-		
-		
-       /*connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result){
-             if (err){
-                res.send(err);
-                console.log(err);
-             }
-             res.json(result)
-            })  */
+       })
 });	
 	
 // ******* Add items into bills table *****
- app.post('/api/add', function(req, res) {
+ app.post('/api/add', authenticateToken, function(req, res) {
 connection.query("INSERT INTO bills SET ?", req.body, function(err, result) {
     if(err) throw err;
     res.json("{'response':'success'}");
@@ -229,7 +217,7 @@ connection.query("INSERT INTO bills SET ?", req.body, function(err, result) {
 });
 	
 // ***** GET item wise sale report ******
- app.get('/api/todaysReport', function(req, res) {  
+ app.get('/api/todaysReport', authenticateToken, function(req, res) {  
 var itemno = req.query.itemno;
 var todaysDate = req.query.todaysDate; 
        connection.query("SELECT masteritems.itemno, masteritems.itemname, masteritems.price, SUM(qty) as qty FROM bills, masteritems where bills.itemno=masteritems.itemno and bills.itemno='"+itemno+"' and bills.date = '"+todaysDate+"' ORDER BY masteritems.itemno",function(err, result){
@@ -243,7 +231,7 @@ var todaysDate = req.query.todaysDate;
     });		
 	
 // ***** GET item wise sale report ******
- app.get('/api/reportBetweenDate', function(req, res) {  
+ app.get('/api/reportBetweenDate', authenticateToken, function(req, res) {  
 var itemno = req.query.itemno;
 var FromDate = req.query.FromDate; 
 var ToDate = req.query.ToDate; 
@@ -260,7 +248,7 @@ var ToDate = req.query.ToDate;
     });	
 	
 // ***** GET Vendor DATA ******
- app.get('/api/getVendorData', function(req, res) {   
+ app.get('/api/getVendorData', authenticateToken, function(req, res) {   
        connection.query('select * from vendor',function(err, result){
 
              if (err){
@@ -272,7 +260,7 @@ var ToDate = req.query.ToDate;
  });
  
  // ***** Vendor Entry: Check whether existing entry for today's date''******	
-app.get('/api/vendorEntryDate', function(req, res) {  
+app.get('/api/vendorEntryDate', authenticateToken, function(req, res) {  
        connection.query("SELECT * FROM vendortransaction where tranDate='"+req.query.tranDate+"' ORDER BY id DESC",function(err, result){
 
              if (err){
@@ -284,7 +272,7 @@ app.get('/api/vendorEntryDate', function(req, res) {
 });
 
 // ***** GET Vendor Balance ******
-app.get('/api/getVendorBalance', function(req, res) { 
+app.get('/api/getVendorBalance', authenticateToken, function(req, res) { 
        connection.query("select * from vendortransaction where vID='"+req.query.vID+"' ORDER BY id DESC LIMIT 1",function(err, result){
 
              if (err){
@@ -297,7 +285,7 @@ app.get('/api/getVendorBalance', function(req, res) {
 
 
 // ***** GET Employee Last Nil Balance Record ******
-app.get('/api/getVendorLastNilBalRecord', function(req, res) { 
+app.get('/api/getVendorLastNilBalRecord', authenticateToken, function(req, res) { 
        connection.query("select * from vendortransaction where vID='"+req.query.vID+"' and balance = 0 ORDER BY id DESC LIMIT 1",function(err, result){
 
              if (err){
@@ -309,7 +297,7 @@ app.get('/api/getVendorLastNilBalRecord', function(req, res) {
 });
 
 // ***** GET Vendor Last Nil Balance Record If balance amount 0 not found******
-app.get('/api/getVendorLastNilBalRecordBalZeroNotFound', function(req, res) { 
+app.get('/api/getVendorLastNilBalRecordBalZeroNotFound', authenticateToken, function(req, res) { 
        connection.query("select * from vendortransaction where vID='"+req.query.vID+"' LIMIT 1",function(err, result){
 
              if (err){
@@ -321,7 +309,7 @@ app.get('/api/getVendorLastNilBalRecordBalZeroNotFound', function(req, res) {
 });
 
 // ***** GET Vendor Due Records ****** 
-app.get('/api/getVendorDueRecords', function(req, res) { 
+app.get('/api/getVendorDueRecords', authenticateToken, function(req, res) { 
        connection.query("select * from vendortransaction where id >= '"+req.query.id+"' and  vID = '"+req.query.vID+"' ORDER BY id DESC",function(err, result){
 
              if (err){
@@ -334,7 +322,7 @@ app.get('/api/getVendorDueRecords', function(req, res) {
 
  
 // ******* Add Vendor data *****
- app.post('/api/addVendor', function(req, res) { 
+ app.post('/api/addVendor', authenticateToken, function(req, res) { 
 connection.query('INSERT INTO vendor SET ?', req.body, function(err, result) {
    // Neat!
     if(err) throw err;
@@ -343,7 +331,7 @@ connection.query('INSERT INTO vendor SET ?', req.body, function(err, result) {
 });	
 	
 // ***** UPDATE Vendor DATA ******
-app.post('/api/updateVendor', function(req, res) {      
+app.post('/api/updateVendor', authenticateToken, function(req, res) {      
 	connection.query('UPDATE vendor SET vName = ?, vAdd = ?, mobileNo = ?, vProductName = ? WHERE vID = ?', [req.body.vName, req.body.vAdd, req.body.mobileNo, req.body.vProductName, req.body.vID], 
 	function(err, result){
         if(err) throw err;
@@ -354,7 +342,7 @@ app.post('/api/updateVendor', function(req, res) {
 
 	
 // ***** Add Vendor Bill ******
-app.post('/api/addVendorBill', function(req, res) {
+app.post('/api/addVendorBill', authenticateToken, function(req, res) {
 	connection.query('INSERT INTO vendortransaction SET ?', req.body, function(err, result) {
     if(err) throw err;
 		res.json(result);
@@ -363,7 +351,7 @@ app.post('/api/addVendorBill', function(req, res) {
 	
 	
 // ***** Search Vendor Bills ******	
-app.get('/api/searchVendorBills', function(req, res) {  
+app.get('/api/searchVendorBills', authenticateToken, function(req, res) {  
 	var vID = req.query.vID;
 	var startDate = req.query.startDate; 
 	var endDate = req.query.endDate; 
@@ -378,7 +366,7 @@ app.get('/api/searchVendorBills', function(req, res) {
 });
 
 // ***** UPDATE Vendor Bills ******
-app.post('/api/updateVendorBill', function(req, res) { 
+app.post('/api/updateVendorBill', authenticateToken, function(req, res) { 
 	 
 	connection.query('UPDATE vendortransaction SET vID = ?, tranDate = ?,  tranType = ?, amount = ?, note = ? WHERE id = ?', [req.body.vID, req.body.tranDate, req.body.tranType, req.body.amount, req.body.note, req.body.id], 
 	function(err, result){
@@ -491,7 +479,7 @@ async function sendMail(type,report, reportDetails, callback) {
 
 
 // ***** GET Employee DATA ******
-app.get('/api/getEmpData', function(req, res) {      
+app.get('/api/getEmpData', authenticateToken, function(req, res) {      
      
        connection.query('select * from employees',function(err, result){
 
@@ -505,7 +493,7 @@ app.get('/api/getEmpData', function(req, res) {
 
 
 // ***** Add Employee ******
-app.post('/api/addEmployee', function(req, res) {     
+app.post('/api/addEmployee', authenticateToken, function(req, res) {     
 	connection.query('INSERT INTO employees SET ?', req.body, function(err, result) {
     if(err) throw err;
 		res.json(result);
@@ -514,7 +502,7 @@ app.post('/api/addEmployee', function(req, res) {
     });
 	
 // ***** UPDATE Employee DATA ******
-app.post('/api/updateEmployee', function(req, res) { 	  
+app.post('/api/updateEmployee', authenticateToken, function(req, res) { 	  
 	  connection.query("UPDATE employees SET eName = ?, eadd = ?, mobileNo = ?, designation = ?, docID = ?, DOJ = ?   WHERE eno = ?", [req.body.eName, req.body.add, req.body.mobileNo, req.body.designation, req.body.docID, req.body.DOJ, req.body.eno],
 	function(err, result){
         if(err) throw err;
@@ -523,7 +511,7 @@ app.post('/api/updateEmployee', function(req, res) {
     });
 	
 // ***** Add Employee Advance******
-app.post('/api/addEmployeeAdvance', function(req, res) { 
+app.post('/api/addEmployeeAdvance', authenticateToken, function(req, res) { 
 	connection.query('INSERT INTO empadvance SET ?', req.body, function(err, result) {
     if(err) throw err;
 		res.json(result);
@@ -531,7 +519,7 @@ app.post('/api/addEmployeeAdvance', function(req, res) {
 });
 
 // ***** Update Employee Advance******
-app.post('/api/updateEmpAdvance', function(req, res) {  
+app.post('/api/updateEmpAdvance', authenticateToken, function(req, res) {  
 	  connection.query("UPDATE empadvance SET eno = ?, tranDate = ?, tranType = ?, amount = ?, note = ?  WHERE id = ?", [req.body.eno, req.body.tranDate, req.body.tranType, req.body.amount, req.body.note, req.body.id],
 	function(err, result){
         if(err) throw err;
@@ -541,7 +529,7 @@ app.post('/api/updateEmpAdvance', function(req, res) {
     });
 	
 // ***** Search Employee Advance******	
-app.get('/api/searchEmpAdvance', function(req, res) {  
+app.get('/api/searchEmpAdvance', authenticateToken, function(req, res) {  
 	var eno = req.query.eno;
 	var startDate = req.query.startDate; 
 	var endDate = req.query.endDate;
@@ -556,7 +544,7 @@ app.get('/api/searchEmpAdvance', function(req, res) {
 });
 
 // ***** Advance Entry: Check whether existing entry for today's date''******	
-app.get('/api/advEntryDate', function(req, res) {  
+app.get('/api/advEntryDate', authenticateToken, function(req, res) {  
        connection.query("SELECT * FROM empadvance where tranDate='"+req.query.tranDate+"' ORDER BY id DESC",function(err, result){
 
              if (err){
@@ -569,7 +557,7 @@ app.get('/api/advEntryDate', function(req, res) {
 });
 
 // ***** GET employee advance Balance ******
-app.get('/api/getEmpAdvBalance', function(req, res) { 
+app.get('/api/getEmpAdvBalance', authenticateToken, function(req, res) { 
        connection.query("select * from empadvance where eno='"+req.query.eno+"' ORDER BY id DESC LIMIT 1",function(err, result){
 
              if (err){
@@ -581,7 +569,7 @@ app.get('/api/getEmpAdvBalance', function(req, res) {
 });
 
 // ***** GET Employee Last Nil Balance Record ******
-app.get('/api/getEmpLastNilBalRecord', function(req, res) { 
+app.get('/api/getEmpLastNilBalRecord', authenticateToken, function(req, res) { 
        connection.query("select * from empadvance where eno='"+req.query.eno+"' and balance = 0 ORDER BY id DESC LIMIT 1",function(err, result){
 
              if (err){
@@ -593,7 +581,7 @@ app.get('/api/getEmpLastNilBalRecord', function(req, res) {
 });
 
 // ***** GET Employee Last Nil Balance Record If balance amount 0 not found******
-app.get('/api/getEmpLastNilBalRecordBalZeroNotFound', function(req, res) { 
+app.get('/api/getEmpLastNilBalRecordBalZeroNotFound', authenticateToken, function(req, res) { 
        connection.query("select * from empadvance where eno='"+req.query.eno+"' LIMIT 1",function(err, result){
 
              if (err){
@@ -605,7 +593,7 @@ app.get('/api/getEmpLastNilBalRecordBalZeroNotFound', function(req, res) {
 });
 
 // ***** GET Employee Due Records ****** 
-app.get('/api/getEmpDueRecords', function(req, res) { 
+app.get('/api/getEmpDueRecords', authenticateToken, function(req, res) { 
        connection.query("select * from empadvance where id >= '"+req.query.id+"' and  eno = '"+req.query.eno+"' ORDER BY id DESC",function(err, result){
 
              if (err){
@@ -618,7 +606,7 @@ app.get('/api/getEmpDueRecords', function(req, res) {
 
 
 // ***** Add Sales Calculation ******
-app.post('/api/addSalecalculation', function(req, res) { 
+app.post('/api/addSalecalculation', authenticateToken, function(req, res) { 
 	connection.query('INSERT INTO salecalculation SET ?', req.body, function(err, result) {
    // Neat!
     if(err) throw err;
@@ -628,7 +616,7 @@ app.post('/api/addSalecalculation', function(req, res) {
 
 
 // ***** get sale calculation yesterday's change amount'******	
-app.get('/api/saleCalDate', function(req, res) {  
+app.get('/api/saleCalDate', authenticateToken, function(req, res) {  
      
        connection.query("SELECT * FROM salecalculation where sDate='"+req.query.cDate+"'",function(err, result){
 
@@ -641,26 +629,8 @@ app.get('/api/saleCalDate', function(req, res) {
 });
 
 // ***** UPDATE sale calculation ******
-app.post('/api/updateSaleCalculation', function(req, res) {   
+app.post('/api/updateSaleCalculation', authenticateToken, function(req, res) {   
 
-
-	 //var exec = require('child_process').exec;
-	 //var child = exec("C:\xampp\mysql\bin\mysqldump --host=localhost --user=root --password=  bhadaitmisal > DB_Backup\backup_bhadaitmisal.sql");
-	 
-	 
-	// var child = exec ("C:\xampp\mysql\bin\mysqldump--routines -h localhost -u root -p  --single-transaction bhadaitmisal > db3_backup.sql");
-	 
-	 
-	 //var child = exec ("mysqldump --routines --h $dbhost --u $dbuser --p $dbpass --single-transaction $dbname > db3_backup.sql");
-  
- // var exec = require('child_process').exec(' mysqldump -u root -p bhadaitmisal > fileName.sql');
- 
-
-  
-  
-  
-
-  
 	  connection.query("UPDATE salecalculation SET c2000 = ?, c500 = ?, c200 = ?, c100 = ?, c50 = ?, c20 = ?, c10 = ?, cash = ?, paytm = ?, bhim = ?, sChange = ?, shopSale = ?, laptopSale = ?, swiggy = ?, zomato = ?, expences = ?   WHERE sDate = ?", [req.body.c2000, req.body.c500, req.body.c200, req.body.c100, req.body.c50, req.body.c20, req.body.c10, req.body.cash, req.body.paytm, req.body.bhim, req.body.sChange, req.body.shopSale, req.body.laptopSale, req.body.swiggy, req.body.zomato, req.body.expences, req.body.sDate],
 	function(err, result){
         if(err) throw err;
@@ -670,7 +640,7 @@ app.post('/api/updateSaleCalculation', function(req, res) {
     });
 	
 // ***** Sale calculation report ******
- app.get('/api/getCalcReport', function(req, res) {  
+ app.get('/api/getCalcReport', authenticateToken, function(req, res) {  
 var itemno = req.query.itemno;
 var startDate = req.query.startDate; 
 var endDate = req.query.endDate; 
@@ -686,7 +656,7 @@ var endDate = req.query.endDate;
     });	
 	
 // ***** Add Pav Entry******
-app.post('/api/addPavEntry', function(req, res) {  
+app.post('/api/addPavEntry', authenticateToken, function(req, res) {  
 	connection.query('INSERT INTO paventry SET ?', req.body, function(err, result) {
     if(err) throw err;
 		res.json(result);
@@ -694,7 +664,7 @@ app.post('/api/addPavEntry', function(req, res) {
 });
 
 // ***** Pav Entry: Check whether existing entry for today's date''******	
-app.get('/api/pavEntryDate', function(req, res) {  
+app.get('/api/pavEntryDate', authenticateToken, function(req, res) {  
        connection.query("SELECT * FROM paventry where tranDate='"+req.query.tranDate+"' ORDER BY pno DESC",function(err, result){
 
              if (err){
@@ -707,7 +677,7 @@ app.get('/api/pavEntryDate', function(req, res) {
 
 
 // ***** UPDATE sale calculation ******
-app.post('/api/updatePavEntry', function(req, res) {      
+app.post('/api/updatePavEntry', authenticateToken, function(req, res) {      
 	  
 	  connection.query("UPDATE paventry SET orderedPav = ?, returnPav = ?, paidPav = ?, balance = ?, note = ?  WHERE tranDate = ?", [req.body.orderedPav, req.body.returnPav, req.body.paidPav, req.body.balance, req.body.note, req.body.tranDate],
 	function(err, result){
@@ -719,7 +689,7 @@ app.post('/api/updatePavEntry', function(req, res) {
 	
 	
 // ***** GET Pav Entry Balance ******
-app.get('/api/pavEntryBalance', function(req, res) { 
+app.get('/api/pavEntryBalance', authenticateToken, function(req, res) { 
        connection.query("select * from paventry ORDER BY pno DESC LIMIT 1",function(err, result){
 
              if (err){
@@ -731,7 +701,7 @@ app.get('/api/pavEntryBalance', function(req, res) {
 });
 
 // ***** GET Last Nil Balance Record ******
-app.get('/api/getLastNilBalRecord', function(req, res) { 
+app.get('/api/getLastNilBalRecord', authenticateToken, function(req, res) { 
        connection.query("select * from paventry where balance = 0 ORDER BY pno DESC LIMIT 1",function(err, result){
 
              if (err){
@@ -743,7 +713,7 @@ app.get('/api/getLastNilBalRecord', function(req, res) {
 });
 
 // ***** GET Due Records ****** req.query.pno
-app.get('/api/getDueRecords', function(req, res) { 
+app.get('/api/getDueRecords', authenticateToken, function(req, res) { 
        connection.query("select * from paventry where pno >= '"+req.query.pno+"' ORDER BY pno DESC",function(err, result){
 
              if (err){
@@ -755,7 +725,7 @@ app.get('/api/getDueRecords', function(req, res) {
 });
 
 	// ***** GET Pav DATA ******
-app.get('/api/getPavData', function(req, res) {      
+app.get('/api/getPavData', authenticateToken, function(req, res) {      
      var startDate = req.query.startDate; 
 	 var endDate = req.query.endDate; 
        connection.query("select * from paventry where tranDate >= '"+startDate+"' and tranDate <= '"+endDate+"' ORDER BY pno DESC",function(err, result){
@@ -769,7 +739,7 @@ app.get('/api/getPavData', function(req, res) {
 });
 
 	// ***** GET Custome Bill Search  ******
-app.get('/api/getCustBill', function(req, res) {      
+app.get('/api/getCustBill', authenticateToken, function(req, res) {      
      var billDate = req.query.billDate; 
 	 var cname = req.query.cname; 
        connection.query("select * from bills where date = '"+billDate+"' and cname LIKE '%"+cname+"%' ORDER BY billno DESC",function(err, result){
@@ -783,7 +753,7 @@ app.get('/api/getCustBill', function(req, res) {
 });
 
 // ***** GET Farsan Customers DATA ******
-app.get('/api/getFarsanCustData', function(req, res) {      
+app.get('/api/getFarsanCustData', authenticateToken, function(req, res) {      
      
        connection.query('select * from farsancustomers',function(err, result){
 
@@ -796,7 +766,7 @@ app.get('/api/getFarsanCustData', function(req, res) {
 });
 
 // ***** Add Farsan Customer ******
-app.post('/api/addFarsanCustomer', function(req, res) { 
+app.post('/api/addFarsanCustomer', authenticateToken, function(req, res) { 
 	connection.query('INSERT INTO farsancustomers SET ?', req.body, function(err, result) {
    // Neat!
     if(err) throw err;
@@ -806,7 +776,7 @@ app.post('/api/addFarsanCustomer', function(req, res) {
     });
 	
 // ***** UPDATE Farsan Customer DATA ******
-app.post('/api/updateFarsanCustomer', function(req, res) {  
+app.post('/api/updateFarsanCustomer', authenticateToken, function(req, res) {  
 	  connection.query("UPDATE farsancustomers SET name = ?, cadd = ?, area = ?, mobileno = ?, joindate = ?   WHERE cno = ?", [req.body.name, req.body.cadd, req.body.area, req.body.mobileno, req.body.joindate, req.body.cno],
 	function(err, result){
         if(err) throw err;
@@ -817,7 +787,7 @@ app.post('/api/updateFarsanCustomer', function(req, res) {
 	
 
 // ***** GET Farsan Custome Bill Balance ******
-app.get('/api/getCustBalance', function(req, res) { 
+app.get('/api/getCustBalance', authenticateToken, function(req, res) { 
        connection.query("select * from farsanentry where cno='"+req.query.cno+"' ORDER BY id DESC LIMIT 1",function(err, result){
              if (err){
                 res.send(err);
@@ -828,7 +798,7 @@ app.get('/api/getCustBalance', function(req, res) {
 });
 
 // ***** Add Employee Advance******
-app.post('/api/addFarsanCustEntry', function(req, res) { 
+app.post('/api/addFarsanCustEntry', authenticateToken, function(req, res) { 
 	connection.query('INSERT INTO farsanentry SET ?', req.body, function(err, result) {
     if(err) throw err;
 		res.json(result);
@@ -836,7 +806,7 @@ app.post('/api/addFarsanCustEntry', function(req, res) {
 });
 
 // ***** Farsan Bill Entry: Check whether existing entry for today's date''******	
-app.get('/api/billEntryDate', function(req, res) { 
+app.get('/api/billEntryDate', authenticateToken, function(req, res) { 
        connection.query("SELECT * FROM farsanentry where trandate='"+req.query.trandate+"' ORDER BY id DESC",function(err, result){
 
              if (err){
@@ -848,7 +818,7 @@ app.get('/api/billEntryDate', function(req, res) {
 });
 
 // ***** GET Farsan Cust Bill Last Nil Balance Record ******
- app.get('/api/getCustBillLastNilBalRecord', function(req, res) { 
+ app.get('/api/getCustBillLastNilBalRecord', authenticateToken, function(req, res) { 
        connection.query("select * from farsanentry where cno='"+req.query.cno+"' and balance = 0 ORDER BY id DESC LIMIT 1",function(err, result){
 
              if (err){
@@ -860,7 +830,7 @@ app.get('/api/billEntryDate', function(req, res) {
 }); 
 
 // ***** GET Farsan Cust Last Nil Balance Record If balance amount 0 not found******
-app.get('/api/getCustBillLastNilBalRecordBalZeroNotFound', function(req, res) { 
+app.get('/api/getCustBillLastNilBalRecordBalZeroNotFound', authenticateToken, function(req, res) { 
        connection.query("select * from farsanentry where cno='"+req.query.cno+"' LIMIT 1",function(err, result){
 
              if (err){
@@ -874,7 +844,7 @@ app.get('/api/getCustBillLastNilBalRecordBalZeroNotFound', function(req, res) {
 
 
 // ***** GET Farsan Cust Due Records ****** 
-app.get('/api/getFarsanCustDueRecords', function(req, res) { 
+app.get('/api/getFarsanCustDueRecords', authenticateToken, function(req, res) { 
        connection.query("select * from farsanentry where id >= '"+req.query.id+"' and  cno = '"+req.query.cno+"' ORDER BY id DESC",function(err, result){
 
              if (err){
@@ -887,7 +857,7 @@ app.get('/api/getFarsanCustDueRecords', function(req, res) {
 
 
 // ***** Search Vendor Bills ******	
-app.get('/api/searchFarsanCustBills', function(req, res) {  
+app.get('/api/searchFarsanCustBills', authenticateToken, function(req, res) {  
 	var cno = req.query.cno;
 	var startDate = req.query.startDate; 
 	var endDate = req.query.endDate; 
@@ -902,7 +872,7 @@ app.get('/api/searchFarsanCustBills', function(req, res) {
 });
 
 // ***** get Products yearly report ******	
-app.get('/api/getYearlyProductsSale', function(req, res) {  
+app.get('/api/getYearlyProductsSale', authenticateToken, function(req, res) {  
 	var cno = req.query.cno;
 	var startDate = req.query.year+"-1-1"; 
 	var endDate = req.query.year+"-12-31"; 
@@ -917,7 +887,7 @@ app.get('/api/getYearlyProductsSale', function(req, res) {
 });
 
 // ***** GET Table Bill ******
- app.get('/api/getBillForTable', function(req, res) {  
+ app.get('/api/getBillForTable', authenticateToken, function(req, res) {  
 var tableNo = req.query.tableNo; 
        connection.query("SELECT * FROM bills where tableno='"+tableNo+"' and billstatus='unpaid'",function(err, result){
 
@@ -930,7 +900,7 @@ var tableNo = req.query.tableNo;
     });
 
 // ***** GET all Kitchen Orders table 500 ie customer parcel******
- app.get('/api/getOrdersByDate', function(req, res) {  
+ app.get('/api/getOrdersByDate', authenticateToken, function(req, res) {  
 //var tableNo = req.query.tableNo; 
        connection.query("SELECT * FROM bills where date='"+req.query.date+"' and waitername='"+req.query.waiterName+"' and foodstatus!='' ORDER BY bill_id",function(err, result){
 
@@ -958,7 +928,7 @@ var tableNo = req.query.tableNo;
     });	
 
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/markOrderReady', function(req, res) { 
+app.post('/api/markOrderReady', authenticateToken, function(req, res) { 
 	 var foodready  = 'ready',  foodpreparing = 'preparing';	 
 	connection.query('UPDATE bills SET foodstatus = ? WHERE billno = ? AND foodstatus = ?', [foodready, req.body.billno, foodpreparing], 
 	function(err, result){
@@ -968,7 +938,7 @@ app.post('/api/markOrderReady', function(req, res) {
 });
 	
 // ***** GET all unpaid Orders ******	
- app.get('/api/getAllUnpaidOrders', function(req, res) {
+ app.get('/api/getAllUnpaidOrders', authenticateToken, function(req, res) {
        connection.query("SELECT tableno, foodstatus FROM bills where billstatus='unpaid' ORDER BY billno",function(err, result){
 
              if (err){
@@ -980,7 +950,7 @@ app.post('/api/markOrderReady', function(req, res) {
 });
 	
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/paidTableBill', function(req, res) {
+app.post('/api/paidTableBill', authenticateToken, function(req, res) {
 	 var billStatus  = 'paid';
 	 
 	connection.query('UPDATE bills SET billstatus = ? WHERE billno = ?', [billStatus, req.body.billno], 
@@ -992,7 +962,7 @@ app.post('/api/paidTableBill', function(req, res) {
 });
 
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/removeBillItem', function(req, res) { 	 
+app.post('/api/removeBillItem', authenticateToken, function(req, res) { 	 
 	connection.query('DELETE from bills WHERE bill_id = ?', [req.body.bill_id], 
 	function(err, result){
         if(err) throw err;
@@ -1002,7 +972,7 @@ app.post('/api/removeBillItem', function(req, res) {
 
 
 // ***** Add pending Orders - Bhaji Vadi Coffee******	
-app.post('/api/addPendingOrders', function(req, res) {  
+app.post('/api/addPendingOrders', authenticateToken, function(req, res) {  
 	var inserts = [];
 	if(Number(req.body.qty_bhaji)>0)
 		inserts.push(['B', Number(req.body.qty_bhaji), req.body.cName, req.body.status, req.body.date]);
@@ -1020,7 +990,7 @@ app.post('/api/addPendingOrders', function(req, res) {
 });
 
 // ***** GET all pending Orders - Bhaji Vadi Coffee ******	
- app.get('/api/getAllPendingOrders', function(req, res) {  
+ app.get('/api/getAllPendingOrders', authenticateToken, function(req, res) {  
 
        connection.query("SELECT id, itemName, cName, qty FROM orders where date='"+req.query.date+"' AND status='P' ORDER BY status",function(err, result){
 
@@ -1033,7 +1003,7 @@ app.post('/api/addPendingOrders', function(req, res) {
 
 
 // ***** Mark Pending Order Ready - Bhaji Vadi Coffee ******
-app.post('/api/markPendingOrderReady', function(req, res) { 
+app.post('/api/markPendingOrderReady', authenticateToken, function(req, res) { 
 	 var status  = 'R';	 
 	connection.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.body.id], 
 	function(err, result){
@@ -1044,7 +1014,7 @@ app.post('/api/markPendingOrderReady', function(req, res) {
 });
 
 // ***** UPDATE Pending Orders DATA - Bhaji Vadi Coffee******
-app.post('/api/updatePendingOrders', function(req, res) {
+app.post('/api/updatePendingOrders', authenticateToken, function(req, res) {
 	
 	  var tmpQty = 0;
 	  if(req.body.qty_bhaji!=undefined){
@@ -1062,7 +1032,7 @@ app.post('/api/updatePendingOrders', function(req, res) {
 });
 
 // ***** Clear Bills Data- Delete Data ******
-app.post('/api/clearBills', function(req, res) { 
+app.post('/api/clearBills', authenticateToken, function(req, res) { 
 	connection.query('DELETE from bills WHERE date != ?', [req.body.date], 
 	function(err, result){
         if(err) throw err;
@@ -1071,7 +1041,7 @@ app.post('/api/clearBills', function(req, res) {
 });
 
 // ***** Clear Pending Orders- Delete Data ******
-app.post('/api/clearPendingOrder', function(req, res) { 
+app.post('/api/clearPendingOrder', authenticateToken, function(req, res) { 
 	connection.query('DELETE from orders WHERE date != ?', [req.body.date], 
 	function(err, result){
         if(err) throw err;
@@ -1080,7 +1050,7 @@ app.post('/api/clearPendingOrder', function(req, res) {
 });
 
 // ***** GET restaurant Info  ******
- app.get('/api/restaurantInfo', function(req, res) {  
+ app.get('/api/restaurantInfo', authenticateToken, function(req, res) {  
        connection.query("SELECT dinein_online, parcel_online FROM restaurantInfo",function(err, result){
 
              if (err){
@@ -1093,7 +1063,7 @@ app.post('/api/clearPendingOrder', function(req, res) {
 });
 
 // ***** UPDATE restaurant info ******
-app.post('/api/updateResturantInfo', function(req, res) {      
+app.post('/api/updateResturantInfo', authenticateToken, function(req, res) {      
 	connection.query('UPDATE restaurantInfo SET dinein_online = ?, parcel_online = ? WHERE id = 1', [ ""+req.body.dineinOnline+"", ""+req.body.parcelOnline+""], 
 	function(err, result){
         if(err) throw err;
