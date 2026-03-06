@@ -105,7 +105,7 @@ const authenticateToken = (req, res, next) => {
         return res.sendStatus(401); // If no token, unauthorized
     }
 
-    // Verify the token's authenticity with the secret key
+    // Verify the token's authenticity with the secret key**
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) {
             return res.sendStatus(403); // If token is invalid or expired, forbidden
