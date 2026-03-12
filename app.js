@@ -1033,7 +1033,7 @@ app.post('/api/updatePendingOrders', authenticateToken, function(req, res) {
 
 // ***** Clear Bills Data- Delete Data ******
 app.post('/api/clearBills', authenticateToken, function(req, res) { 
-	connection.query('DELETE from bills WHERE date != ?', [req.body.date], 
+	connection.query("DELETE from bills WHERE date != ? and waitername!='self-dinein' and waitername!='self-parcel'", [req.body.date], 
 	function(err, result){
         if(err) throw err;
         res.json(result.affectedRows);
