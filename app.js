@@ -1033,11 +1033,26 @@ app.post('/api/updatePendingOrders', authenticateToken, function(req, res) {
 
 // ***** Clear Bills Data- Delete Data ******
 app.post('/api/clearBills', authenticateToken, function(req, res) { 
-	connection.query("DELETE from bills WHERE date != ? and waitername!='self-dinein' and waitername!='self-parcel'", [req.body.date], 
+	connection.query("INSERT INTO customerData SELECT bill_id, cname, mobileno, waitername  FROM bills where bills.waitername='self-dinein' or bills.waitername='self-parcel'",function(err, result1){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+				
+			 connection.query("DELETE from bills WHERE date != ?", [req.body.date], 
+				function(err, result2){
+					if(err) throw err;
+					res.json({ data1: result1, data2: result2.affectedRows }); //res.json(result.affectedRows);
+					
+				});
+	
+	
+	
+	/*connection.query("DELETE from bills WHERE date != ? and waitername!='self-dinein' and waitername!='self-parcel'", [req.body.date], 
 	function(err, result){
         if(err) throw err;
         res.json(result.affectedRows);
-    });     
+    });  */   
 });
 
 // ***** Clear Pending Orders- Delete Data ******
