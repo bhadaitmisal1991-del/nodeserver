@@ -220,7 +220,7 @@ connection.query("INSERT INTO bills SET ?", req.body, function(err, result) {
  app.get('/api/todaysReport', authenticateToken, function(req, res) {  
 var itemno = req.query.itemno;
 var todaysDate = req.query.todaysDate; 
-       connection.query("SELECT masteritems.itemno, masteritems.itemname, masteritems.price, SUM(qty) as qty FROM bills, masteritems where bills.itemno=masteritems.itemno and bills.itemno='"+itemno+"' and bills.date = '"+todaysDate+"' ORDER BY masteritems.itemno",function(err, result){
+       connection.query("SELECT masteritems.itemno, masteritems.itemname, masteritems.price, SUM(qty) as qty FROM bills, masteritems where bills.itemno=masteritems.itemno and bills.itemno='"+itemno+"' and bills.date = '"+todaysDate+"' and bills.waitername!='self-dinein' and bills.waitername!='self-parcel' ORDER BY masteritems.itemno",function(err, result){
 
              if (err){
                 res.send(err);
@@ -237,7 +237,7 @@ var FromDate = req.query.FromDate;
 var ToDate = req.query.ToDate; 
 	 if(ToDate=="undefined")
 		ToDate=FromDate;
-       connection.query("SELECT items.itemno, items.itemname, items.price, SUM(qty) as qty FROM bills, items where bills.itemno=items.itemno and bills.itemno='"+itemno+"' and bills.date >= '"+FromDate+"' and bills.date <= '"+ToDate+"' ORDER BY items.itemno",function(err, result){
+       connection.query("SELECT masteritems.itemno, masteritems.itemname, masteritems.price, SUM(qty) as qty FROM bills, masteritems where bills.itemno=masteritems.itemno and bills.itemno='"+itemno+"' and bills.date >= '"+FromDate+"' and bills.date <= '"+ToDate+"' and bills.waitername!='self-dinein' and bills.waitername!='self-parcel' ORDER BY masteritems.itemno",function(err, result){
 
              if (err){
                 res.send(err);
