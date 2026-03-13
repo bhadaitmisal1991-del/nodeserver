@@ -1046,7 +1046,7 @@ app.post('/api/clearBills', authenticateToken, function(req, res) {
 					
 				});
 	
-	
+			});
 	
 	/*connection.query("DELETE from bills WHERE date != ? and waitername!='self-dinein' and waitername!='self-parcel'", [req.body.date], 
 	function(err, result){
