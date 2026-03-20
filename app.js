@@ -956,7 +956,7 @@ app.post('/api/paidTableBill', authenticateToken, function(req, res) {
 	connection.query('UPDATE bills SET billstatus = ? WHERE billno = ?', [billStatus, req.body.billno], 
 	function(err, result){
         if(err) throw err;
-        res.json(result);
+        res.json(result.affectedRows);
         });
      
 });
@@ -966,7 +966,7 @@ app.post('/api/removeBillItem', authenticateToken, function(req, res) {
 	connection.query('DELETE from bills WHERE bill_id = ?', [req.body.bill_id], 
 	function(err, result){
         if(err) throw err;
-        res.json(result);
+        res.json(result.affectedRows);
     });     
 });
 
@@ -984,7 +984,7 @@ app.post('/api/addPendingOrders', authenticateToken, function(req, res) {
 	var sql = "INSERT INTO orders (itemName, qty, cName, status, date) VALUES ?";
 		connection.query(sql, [inserts], function(err, result) {
 		if(err) throw err;
-			res.json(result);
+			res.json(result.affectedRows);
 		});
 	 
 });
