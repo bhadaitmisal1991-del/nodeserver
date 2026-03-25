@@ -169,7 +169,7 @@ app.post('/api/add', async (req, res) => {
 });
 
 // ******* Add items into bills table LOCKing api*****
- app.post('/api/addToken', function(req, res) {
+ app.post('/api/addToken', async (req, res) => {
 	//const { date, isToken } = req.query;
 	const conn = await pool.promise().getConnection();
 	try {
@@ -205,8 +205,7 @@ app.post('/api/add', async (req, res) => {
     } finally {
         // Release the connection back to the pool
         conn.release();
-    }
-     
+    }     
 });
 	
 // ***** GET item wise sale report ******
