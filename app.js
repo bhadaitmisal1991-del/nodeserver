@@ -167,47 +167,6 @@ app.post('/api/add', async (req, res) => {
         res.json({ response: 'success' });
     } catch (err) { res.status(500).send(err); }
 });
-
-// ******* Add items into bills table LOCKing api*****
-app.post('/api/addToken', async (req, res) => {
-	//const { date, isToken } = req.query;
-	/*const conn = await pool.promise().getConnection();
-	try {
-		await conn.beginTransaction();
-		
-		// 1. Get the last token for TODAY and LOCK the row (FOR UPDATE)
-        const [rows] = await conn.query(
-            "SELECT tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY id DESC LIMIT 1 FOR UPDATE",
-            [req.body.date]
-        );
-		
-		let lastToken = (rows.length > 0) ? rows.tokenNo : 0;
-        let newToken;
-
-        // 2. Reset logic: If reaches 100, reset to 1, else +1
-        if (lastToken >= 100) {
-            newToken = 1;
-        } else {
-            newToken = lastToken + 1;
-        }
-		
-		const billData = { ...req.body, tokenNo: newToken };
-		
-        await conn.query("INSERT INTO bills SET ?", [billData]);
-        await conn.commit();
-		res.json({ response: 'success', tokenNo: newToken });
-	
-	} catch (err) {
-        // If anything fails, undo changes so the token isn't "lost"
-        await conn.rollback();
-        console.error("Token Generation Error:", err);
-        res.status(500).json({ error: "Failed to generate token", details: err.message });
-    } finally {
-        // Release the connection back to the pool
-        conn.release();
-    }*/
-     
-});
 	
 // ***** GET item wise sale report ******
 app.get('/api/todaysReport', authenticateToken, async (req, res) => {  
