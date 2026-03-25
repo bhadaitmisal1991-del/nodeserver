@@ -1,134 +1,180 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require("body-parser");
-const path = require("path");
-const mysql = require('mysql2/promise'); // Promise-based for async/await
+var express = require('express');
+var cors = require('cors')
+var bodyParser = require("body-parser"); //Used to parse the request and send our response to client
+var path = require("path");
+var mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const Razorpay = require('razorpay');
+const { networkInterfaces } = require('os');
+
 const nodemailer = require("nodemailer");
 
-const app = express();
-// Middleware
+var app = express();
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(express.static(__dirname + '/public'));
+app.use(bodyParser.urlencoded({'extended':'true'}));            // parse application/x-www-form-urlencoded
+app.use(bodyParser.json());                                     // parse application/json
+app.use(bodyParser.json({ type: 'application/vnd.api+json' })); 
 
 
-// --- 1. Database Connection Pool ---
-const pool = mysql.createPool({
-    host: process.env.AIVEN_MYSQL_HOST,
-    user: process.env.AIVEN_MYSQL_USER,
-    password: process.env.AIVEN_MYSQL_PASSWORD,
-    database: process.env.AIVEN_MYSQL_DBNAME,
-    port: 21425,
-    ssl: {
-        ca: fs.readFileSync('/etc/secrets/MYSQL_SSL_CA').toString()
-    },
-    waitForConnections: true,
-    connectionLimit: 15,
-    queueLimit: 0
+var connection = mysql.createConnection({
+    host : process.env.AIVEN_MYSQL_HOST,
+    user : process.env.AIVEN_MYSQL_USER,
+    password : process.env.AIVEN_MYSQL_PASSWORD,
+    database : process.env.AIVEN_MYSQL_DBNAME,
+	port: 21425,
+	ssl: {
+        // Read CA certificate from the file uploaded to Render
+        ca: fs.readFileSync('/etc/secrets/MYSQL_SSL_CA').toString() 
+    }
+}); 
+
+/*var connection = mysql.createConnection({
+    host : 'bhadaitmisal-bhadaitmisal.h.aivencloud.com',
+    user : 'avnadmin',
+    password : 'AVNS_ZuGpR80Ew8TMU5YUCvl',
+    database : 'defaultdb',
+	port: 21425
+	
+});*/
+connection.connect(); 
+
+
+connection.on('error', function(err) {
+    console.error('Caught an error on the connection:', err.message);
+    // Implement logic to handle the specific error, e.g., reconnecting
+    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+        // Handle a lost connection, perhaps by attempting to re-establish
+        console.log('Connection lost. Attempting to reconnect...');
+        // ... add reconnection logic here ...
+    } else {
+        // Re-throw other errors if you cannot handle them
+		console.log('Connection lost. Attempting to reconnect...'+err); 
+        throw err;
+    }
 });
 
-// --- 2. Authentication Middleware ---
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ');
-    if (token == null) return res.sendStatus(401);
 
+// Login Endpoint
+
+app.post('/api/register', (req, res) => {
+    const { email, password } = req.body;
+    
+    // 1. Generate a salt and hash the password
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(password, salt);
+
+    // 2. Save the HASHED password to the database
+    connection.query('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashedPassword], (err, result) => {
+        if (err) {
+            return res.status(500).send('Error registering user');
+        }
+        res.status(201).send({ message: 'User created successfully!' });
+    });
+});
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
+
+    connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+        if (err || results.length === 0) return res.status(401).send('User not found');
+
+        const user = results[0];
+        const passwordIsValid = bcrypt.compareSync(password, user.password);
+
+        if (!passwordIsValid) return res.status(401).send('Invalid password');
+		
+
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
+        res.status(200).send({ auth: true, token: token });
+    });
+});	
+
+
+
+// --- Authentication Middleware: Verify Token ---
+const authenticateToken = (req, res, next) => {
+    // Get the token from the 'Authorization' header
+    // The header format is typically "Bearer TOKEN"
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Extract the token part
+
+    if (token == null) {
+        return res.sendStatus(401); // If no token, unauthorized
+    }
+
+    // Verify the token's authenticity with the secret key**
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
+        if (err) {
+            return res.sendStatus(403); // If token is invalid or expired, forbidden
+        }
+        req.user = user; // Add the decoded user payload to the request object
+        next(); // Proceed to the next middleware or route handler
     });
 };
 
 
 
-
-// Login Endpoint
-
-app.post('/api/register', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const salt = bcrypt.genSaltSync(10);
-        const hashedPassword = bcrypt.hashSync(password, salt);
-        await pool.query('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashedPassword]);
-        res.status(201).send({ message: 'User created successfully!' });
-    } catch (err) {
-        res.status(500).send('Error registering user');
-    }
-});
-
-app.post('/api/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const [results] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-        if (results.length === 0) return res.status(401).send('User not found');
-
-        const user = results;
-        if (!bcrypt.compareSync(password, user.password)) return res.status(401).send('Invalid password');
-
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
-        res.status(200).send({ auth: true, token: token });
-    } catch (err) {
-        res.status(500).send('Login error');
-    }
-});
-
-
-
-
-
 //******Razor Pay Implementation******
-// --- 5. Razorpay & Mail Logic ---
 const razorpay = new Razorpay({
-    key_id: process.env.key_id,
-    key_secret: process.env.key_secret,
+  key_id: process.env.key_id, 
+  key_secret: process.env.key_secret, 
 });
 
 app.post('/api/createOrder', async (req, res) => {
-    try {
-        const { amount, currency } = req.body;
-        const data = await razorpay.orders.create({
-            amount: amount * 100,
-            currency: currency,
-            receipt: 'RCP_ID' + Date.now(),
-        });
-        res.json({ amount: data.amount, id: data.id });
-    } catch (error) {
-        res.status(500).send('Error creating order');
-    }
+  try {
+    const { amount, currency } = req.body;
+    const data = await razorpay.orders.create({
+      amount: amount * 100, // amount in paise
+      currency: currency,
+      receipt: 'RCP_ID' + Date.now(),
+    });
+    res.json({
+      amount: data.amount,
+      id: data.id
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).send('Error creating order');
+  }
 });
 
 //******Razor Pay Implementation******
 
 // ***** GET Items PArcel Menu DATA ******
-app.get('/api/GetItemsData', async (req, res) => {
-    try {
-        const [result] = await pool.query('SELECT * FROM parcelitems');
-        res.json(result);
-    } catch (err) { res.status(500).send(err); }
-});
+ app.get('/api/GetItemsData', function(req, res) {    
+       connection.query('select * from parcelitems',function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });
 
 // ***** GET Dine In Items DATA ******
-app.get('/api/GetDineInItemsData', async (req, res) => {
-    try {
-        const [result] = await pool.query('SELECT * FROM dineinitems');
-        res.json(result);
-    } catch (err) { res.status(500).send(err); }
-});
+ app.get('/api/GetDineInItemsData', function(req, res) {    
+       connection.query('select * from dineinitems',function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });
 	
 // ***** GET MasterMenu Items DATA ******
-app.get('/api/GetMasterItemsData', async (req, res) => {
-    try {
-        const [result] = await pool.query('SELECT * FROM masteritems');
-        res.json(result);
-    } catch (err) { res.status(500).send(err); }
-});
-
+ app.get('/api/GetMasterItemsData', authenticateToken, function(req, res) {    
+       connection.query('select * from masteritems',function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });
 	
 // ******* Add Menu Items *****
  app.post('/api/addBillingMenu', authenticateToken, function(req, res) {    
@@ -139,315 +185,202 @@ connection.query('INSERT INTO items SET ?', req.body, function(err, result) {
 });	
 	
 // ***** GET BillNo ******
- app.get('/api/billno', async (req, res) => {
-    const { date, isToken } = req.query;
-    try {
-        const [result1] = await pool.query(
-            "SELECT billno, tokenNo FROM bills WHERE date = ? ORDER BY billno DESC LIMIT 1", 
-            [date]
-        );
-        
-        let result2 = null;
-        if (isToken === "true") {
-            [result2] = await pool.query(
-                "SELECT * FROM bills WHERE date = ? AND tableno = 0 ORDER BY billno DESC LIMIT 1",
-                [date]
-            );
-        }
-        res.json({ data1: result1, data2: result2 });
-    } catch (err) {
-        res.status(500).send(err);
-    }
-});
+ app.get('/api/billno', function(req, res)  {  
+var tmpdate = req.query.date; 
+		connection.query("SELECT billno, tokenNo FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1",function(err, result1){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+			 if(req.query.isToken=="true"){
+					connection.query("SELECT * FROM bills where date='"+tmpdate+"' and tableno=0 ORDER BY billno DESC LIMIT 1",function(err, result2){
+					 if (err){
+						res.send(err);
+						console.log(err);
+					 }
+					 
+					 res.json({ data1: result1, data2: result2 });
+				 });
+			 }else{
+				res.json({ data1: result1, data2: null });
+			 }
+       })
+});	
 	
 // ******* Add items into bills table *****
-app.post('/api/add', async (req, res) => {
-    try {
-        await pool.query("INSERT INTO bills SET ?", [req.body]);
-        res.json({ response: 'success' });
-    } catch (err) { res.status(500).send(err); }
+ app.post('/api/add', function(req, res) {
+connection.query("INSERT INTO bills SET ?", req.body, function(err, result) {
+    if(err) throw err;
+    res.json("{'response':'success'}");
+	});
+     
 });
 
 // ******* Add items into bills table LOCKing api*****
  app.post('/api/addToken', function(req, res) {
-	//const { date, isToken } = req.query;
-	/*const conn = await pool.promise().getConnection();
-	try {
-		await conn.beginTransaction();
-		
-		// 1. Get the last token for TODAY and LOCK the row (FOR UPDATE)
-        const [rows] = await conn.query(
-            "SELECT tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY id DESC LIMIT 1 FOR UPDATE",
-            [req.body.date]
-        );
-		
-		let lastToken = (rows.length > 0) ? rows.tokenNo : 0;
-        let newToken;
-
-        // 2. Reset logic: If reaches 100, reset to 1, else +1
-        if (lastToken >= 100) {
-            newToken = 1;
-        } else {
-            newToken = lastToken + 1;
-        }
-		
-		const billData = { ...req.body, tokenNo: newToken };
-		
-        await conn.query("INSERT INTO bills SET ?", [billData]);
-        await conn.commit();
-		res.json({ response: 'success', tokenNo: newToken });
-	
-	} catch (err) {
-        // If anything fails, undo changes so the token isn't "lost"
-        await conn.rollback();
-        console.error("Token Generation Error:", err);
-        res.status(500).json({ error: "Failed to generate token", details: err.message });
-    } finally {
-        // Release the connection back to the pool
-        conn.release();
-    }*/
+ 
      
 });
 	
 // ***** GET item wise sale report ******
-app.get('/api/todaysReport', authenticateToken, async (req, res) => {  
-    try {
-        const { itemno, todaysDate } = req.query;
+ app.get('/api/todaysReport', authenticateToken, function(req, res) {  
+var itemno = req.query.itemno;
+var todaysDate = req.query.todaysDate; 
+       connection.query("SELECT masteritems.itemno, masteritems.itemname, masteritems.price, SUM(qty) as qty FROM bills, masteritems where bills.itemno=masteritems.itemno and bills.itemno='"+itemno+"' and bills.date = '"+todaysDate+"' and bills.waitername!='self-dinein' and bills.waitername!='self-parcel' ORDER BY masteritems.itemno",function(err, result){
 
-        const query = `
-            SELECT 
-                masteritems.itemno, 
-                masteritems.itemname, 
-                masteritems.price, 
-                SUM(bills.qty) as qty 
-            FROM bills
-            INNER JOIN masteritems ON bills.itemno = masteritems.itemno
-            WHERE bills.itemno = ? 
-              AND bills.date = ? 
-              AND bills.waitername NOT IN ('self-dinein', 'self-parcel')
-            GROUP BY masteritems.itemno, masteritems.itemname, masteritems.price
-            ORDER BY masteritems.itemno
-        `;
-
-        const [result] = await pool.query(query, [itemno, todaysDate]);
-        res.json(result);
-    } catch (err) {
-        console.error("Report Error:", err);
-        res.status(500).send("Error generating today's report");
-    }
-});	
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });		
 	
 // ***** GET item wise sale report ******
-app.get('/api/reportBetweenDate', authenticateToken, async (req, res) => {  
-    try {
-        const { itemno, FromDate } = req.query;
-        let ToDate = req.query.ToDate;
+ app.get('/api/reportBetweenDate', authenticateToken, function(req, res) {  
+var itemno = req.query.itemno;
+var FromDate = req.query.FromDate; 
+var ToDate = req.query.ToDate; 
+	 if(ToDate=="undefined")
+		ToDate=FromDate;
+       connection.query("SELECT masteritems.itemno, masteritems.itemname, masteritems.price, SUM(qty) as qty FROM bills, masteritems where bills.itemno=masteritems.itemno and bills.itemno='"+itemno+"' and bills.date >= '"+FromDate+"' and bills.date <= '"+ToDate+"' and bills.waitername!='self-dinein' and bills.waitername!='self-parcel' ORDER BY masteritems.itemno",function(err, result){
 
-        // If ToDate is missing or undefined, default it to FromDate
-        if (!ToDate || ToDate === "undefined") {
-            ToDate = FromDate;
-        }
-
-        const query = `
-            SELECT 
-                masteritems.itemno, 
-                masteritems.itemname, 
-                masteritems.price, 
-                SUM(bills.qty) as qty 
-            FROM bills
-            INNER JOIN masteritems ON bills.itemno = masteritems.itemno
-            WHERE bills.itemno = ? 
-              AND bills.date >= ? 
-              AND bills.date <= ? 
-              AND bills.waitername NOT IN ('self-dinein', 'self-parcel')
-            GROUP BY masteritems.itemno, masteritems.itemname, masteritems.price
-            ORDER BY masteritems.itemno
-        `;
-
-        const [result] = await pool.query(query, [itemno, FromDate, ToDate]);
-        res.json(result);
-    } catch (err) {
-        console.error("Range Report Error:", err);
-        res.status(500).send("Error generating date-range report");
-    }
-});
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });	
 	
 // ***** GET Vendor DATA ******
-app.get('/api/getVendorData', authenticateToken, async (req, res) => {
-    try {
-        const [result] = await pool.query('SELECT * FROM vendor');
-        res.json(result);
-    } catch (err) { res.status(500).send(err); }
-});
+ app.get('/api/getVendorData', authenticateToken, function(req, res) {   
+       connection.query('select * from vendor',function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+				res.json(result)
+            })  
+ });
  
  // ***** Vendor Entry: Check whether existing entry for today's date''******	
-app.get('/api/vendorEntryDate', authenticateToken, async (req, res) => {  
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM vendortransaction WHERE tranDate = ? ORDER BY id DESC",
-            [req.query.tranDate]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching vendor entry date");
-    }
+app.get('/api/vendorEntryDate', authenticateToken, function(req, res) {  
+       connection.query("SELECT * FROM vendortransaction where tranDate='"+req.query.tranDate+"' ORDER BY id DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 // ***** GET Vendor Balance ******
-app.get('/api/getVendorBalance', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM vendortransaction WHERE vID = ? ORDER BY id DESC LIMIT 1",
-            [req.query.vID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching vendor balance");
-    }
+app.get('/api/getVendorBalance', authenticateToken, function(req, res) { 
+       connection.query("select * from vendortransaction where vID='"+req.query.vID+"' ORDER BY id DESC LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 
 // ***** GET Employee Last Nil Balance Record ******
-app.get('/api/getVendorLastNilBalRecord', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM vendortransaction WHERE vID = ? AND balance = 0 ORDER BY id DESC LIMIT 1",
-            [req.query.vID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching nil balance record");
-    }
+app.get('/api/getVendorLastNilBalRecord', authenticateToken, function(req, res) { 
+       connection.query("select * from vendortransaction where vID='"+req.query.vID+"' and balance = 0 ORDER BY id DESC LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }      
+             res.json(result)
+            })  
 });
 
 // ***** GET Vendor Last Nil Balance Record If balance amount 0 not found******
-app.get('/api/getVendorLastNilBalRecordBalZeroNotFound', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM vendortransaction WHERE vID = ? LIMIT 1",
-            [req.query.vID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching fallback balance record");
-    }
+app.get('/api/getVendorLastNilBalRecordBalZeroNotFound', authenticateToken, function(req, res) { 
+       connection.query("select * from vendortransaction where vID='"+req.query.vID+"' LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }           
+             res.json(result)
+            })  
 });
 
 // ***** GET Vendor Due Records ****** 
-app.get('/api/getVendorDueRecords', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM vendortransaction WHERE id >= ? AND vID = ? ORDER BY id DESC",
-            [req.query.id, req.query.vID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching due records");
-    }
+app.get('/api/getVendorDueRecords', authenticateToken, function(req, res) { 
+       connection.query("select * from vendortransaction where id >= '"+req.query.id+"' and  vID = '"+req.query.vID+"' ORDER BY id DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
  
 // ******* Add Vendor data *****
-app.post('/api/addVendor', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query('INSERT INTO vendor SET ?', [req.body]);
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error adding vendor");
-    }
-});
+ app.post('/api/addVendor', authenticateToken, function(req, res) { 
+connection.query('INSERT INTO vendor SET ?', req.body, function(err, result) {
+   // Neat!
+    if(err) throw err;
+    res.json(result);
+ });	
+});	
 	
 // ***** UPDATE Vendor DATA ******
-app.post('/api/updateVendor', authenticateToken, async (req, res) => {      
-    try {
-        const { vName, vAdd, mobileNo, vProductName, vID } = req.body;
-        const [result] = await pool.query(
-            'UPDATE vendor SET vName = ?, vAdd = ?, mobileNo = ?, vProductName = ? WHERE vID = ?', 
-            [vName, vAdd, mobileNo, vProductName, vID]
-        );
+app.post('/api/updateVendor', authenticateToken, function(req, res) {      
+	connection.query('UPDATE vendor SET vName = ?, vAdd = ?, mobileNo = ?, vProductName = ? WHERE vID = ?', [req.body.vName, req.body.vAdd, req.body.mobileNo, req.body.vProductName, req.body.vID], 
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error updating vendor");
-    }
+        });     
 });
 
 
 	
 // ***** Add Vendor Bill ******
-app.post('/api/addVendorBill', authenticateToken, async (req, res) => {
-    try {
-        const [result] = await pool.query('INSERT INTO vendortransaction SET ?', [req.body]);
-        res.json(result);
-    } catch (err) { res.status(500).send(err); }
-});
+app.post('/api/addVendorBill', authenticateToken, function(req, res) {
+	connection.query('INSERT INTO vendortransaction SET ?', req.body, function(err, result) {
+    if(err) throw err;
+		res.json(result);
+	});
+ });
 	
 	
 // ***** Search Vendor Bills ******	
-app.get('/api/searchVendorBills', authenticateToken, async (req, res) => {
-    try {
-        const { vID, FromDate, ToDate } = req.query;
+app.get('/api/searchVendorBills', authenticateToken, function(req, res) {  
+	var vID = req.query.vID;
+	var startDate = req.query.startDate; 
+	var endDate = req.query.endDate; 
+       connection.query("SELECT * FROM vendortransaction where vID='"+vID+"' and tranDate >= '"+startDate+"' and tranDate <= '"+endDate+"' ORDER BY id DESC",function(err, result){
 
-        // Validation to ensure ToDate is handled if it's sent as a string "undefined"
-        const finalToDate = (ToDate && ToDate !== "undefined") ? ToDate : FromDate;
-
-        const query = `
-            SELECT * FROM vendortransaction 
-            WHERE vID = ? 
-            AND tranDate >= ? 
-            AND tranDate <= ? 
-            ORDER BY id ASC
-        `;
-
-        const [results] = await pool.query(query, [vID, FromDate, finalToDate]);
-        res.json(results);
-    } catch (err) {
-        console.error("Search Vendor Bills Error:", err);
-        res.status(500).send("Error searching vendor bills");
-    }
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 // ***** UPDATE Vendor Bills ******
-app.post('/api/updateVendorBill', authenticateToken, async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-        const { 
-            tranDate, vName, vID, billNo, 
-            pTotal, pPaid, balance, id 
-        } = req.body;
-
-        await connection.beginTransaction();
-
-        const query = `
-            UPDATE vendortransaction 
-            SET tranDate = ?, vName = ?, vID = ?, billNo = ?, 
-                pTotal = ?, pPaid = ?, balance = ? 
-            WHERE id = ?
-        `;
-
-        const [result] = await connection.query(query, [
-            tranDate, vName, vID, billNo, 
-            pTotal, pPaid, balance, id
-        ]);
-
-        await connection.commit();
+app.post('/api/updateVendorBill', authenticateToken, function(req, res) { 
+	 
+	connection.query('UPDATE vendortransaction SET vID = ?, tranDate = ?,  tranType = ?, amount = ?, note = ? WHERE id = ?', [req.body.vID, req.body.tranDate, req.body.tranType, req.body.amount, req.body.note, req.body.id], 
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) {
-        // Undo changes if the update fails
-        await connection.rollback();
-        console.error("Update Vendor Bill Error:", err);
-        res.status(500).send("Error updating vendor bill");
-    } finally {
-        // Return connection to the pool
-        connection.release();
-    }
-});
+        });
+     
+    });
 	
 //********** Send Report Mail **************************
 app.get("/api/sendDB_BackupMail", (req, res) => {
@@ -552,814 +485,644 @@ async function sendMail(type,report, reportDetails, callback) {
 
 
 // ***** GET Employee DATA ******
-app.get('/api/getEmpData', authenticateToken, async (req, res) => {
-    try {
-        const [result] = await pool.query('SELECT * FROM employees');
-        res.json(result);
-    } catch (err) { res.status(500).send(err); }
+app.get('/api/getEmpData', authenticateToken, function(req, res) {      
+     
+       connection.query('select * from employees',function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 
 // ***** Add Employee ******
-app.post('/api/addEmployee', authenticateToken, async (req, res) => { 
-    try {
-        // req.body should contain { ename, eadd, mobileNo, designation, docID, DOJ, ... }
-        const [result] = await pool.query('INSERT INTO employees SET ?', [req.body]);
-        
-        res.json({
-            status: 'success',
-            message: 'Employee added successfully',
-            insertId: result.insertId
-        });
-    } catch (err) {
-        console.error("Add Employee Error:", err);
-        
-        // Handle specific DB errors (like duplicate mobile numbers if you have a UNIQUE constraint)
-        if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(400).send("Employee with this ID or Mobile already exists.");
-        }
-        
-        res.status(500).send("Error adding employee to the database.");
-    }
-});
+app.post('/api/addEmployee', authenticateToken, function(req, res) {     
+	connection.query('INSERT INTO employees SET ?', req.body, function(err, result) {
+    if(err) throw err;
+		res.json(result);
+	});
+     
+    });
 	
 // ***** UPDATE Employee DATA ******
-app.post('/api/updateEmployee', authenticateToken, async (req, res) => {
-    try {
-        const { eName, add, mobileNo, designation, docID, DOJ, eno } = req.body;
-        const [result] = await pool.query(
-            "UPDATE employees SET eName=?, eadd=?, mobileNo=?, designation=?, docID=?, DOJ=? WHERE eno=?",
-            [eName, add, mobileNo, designation, docID, DOJ, eno]
-        );
+app.post('/api/updateEmployee', authenticateToken, function(req, res) { 	  
+	  connection.query("UPDATE employees SET eName = ?, eadd = ?, mobileNo = ?, designation = ?, docID = ?, DOJ = ?   WHERE eno = ?", [req.body.eName, req.body.add, req.body.mobileNo, req.body.designation, req.body.docID, req.body.DOJ, req.body.eno],
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) { res.status(500).send(err); }
-});
+        });		    
+    });
 	
 // ***** Add Employee Advance******
-app.post('/api/addEmployeeAdvance', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query('INSERT INTO empadvancetransaction SET ?', [req.body]);
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error adding employee advance");
-    }
+app.post('/api/addEmployeeAdvance', authenticateToken, function(req, res) { 
+	connection.query('INSERT INTO empadvance SET ?', req.body, function(err, result) {
+    if(err) throw err;
+		res.json(result);
+	});     
 });
 
 // ***** Update Employee Advance******
-app.post('/api/updateEmpAdvance', authenticateToken, async (req, res) => {      
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-        const { tranDate, eName, eno, pTotal, pPaid, balance, id } = req.body;
-        
-        const [result] = await connection.query(
-            "UPDATE empadvancetransaction SET tranDate=?, eName=?, eno=?, pTotal=?, pPaid=?, balance=? WHERE id=?", 
-            [tranDate, eName, eno, pTotal, pPaid, balance, id]
-        );
-
-        await connection.commit();
+app.post('/api/updateEmpAdvance', authenticateToken, function(req, res) {  
+	  connection.query("UPDATE empadvance SET eno = ?, tranDate = ?, tranType = ?, amount = ?, note = ?  WHERE id = ?", [req.body.eno, req.body.tranDate, req.body.tranType, req.body.amount, req.body.note, req.body.id],
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) {
-        await connection.rollback();
-        console.error(err);
-        res.status(500).send("Error updating employee advance");
-    } finally {
-        connection.release();
-    }
-});	
+        });
+		    
+    });
+	
 // ***** Search Employee Advance******	
-app.get('/api/searchEmpAdvance', authenticateToken, async (req, res) => {
-    try {
-        const { eno, FromDate, ToDate } = req.query;
-        const finalToDate = (ToDate && ToDate !== "undefined") ? ToDate : FromDate;
+app.get('/api/searchEmpAdvance', authenticateToken, function(req, res) {  
+	var eno = req.query.eno;
+	var startDate = req.query.startDate; 
+	var endDate = req.query.endDate;
+       connection.query("SELECT * FROM empadvance where eno='"+eno+"' and tranDate >= '"+startDate+"' and tranDate <= '"+endDate+"' ORDER BY tranDate DESC",function(err, result){
 
-        const [results] = await pool.query(
-            "SELECT * FROM empadvancetransaction WHERE eno = ? AND tranDate >= ? AND tranDate <= ? ORDER BY id ASC",
-            [eno, FromDate, finalToDate]
-        );
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error searching employee advance");
-    }
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 // ***** Advance Entry: Check whether existing entry for today's date''******	
-app.get('/api/advEntryDate', authenticateToken, async (req, res) => {  
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM empadvancetransaction WHERE tranDate = ? ORDER BY id DESC",
-            [req.query.tranDate]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching advance entry date");
-    }
+app.get('/api/advEntryDate', authenticateToken, function(req, res) {  
+       connection.query("SELECT * FROM empadvance where tranDate='"+req.query.tranDate+"' ORDER BY id DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+            
+             res.json(result)
+            })  
 });
 
 // ***** GET employee advance Balance ******
-app.get('/api/getEmpAdvBalance', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM empadvancetransaction WHERE eno = ? ORDER BY id DESC LIMIT 1",
-            [req.query.eno]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching advance balance");
-    }
+app.get('/api/getEmpAdvBalance', authenticateToken, function(req, res) { 
+       connection.query("select * from empadvance where eno='"+req.query.eno+"' ORDER BY id DESC LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** GET Employee Last Nil Balance Record ******
-app.get('/api/getEmpLastNilBalRecord', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM empadvancetransaction WHERE eno = ? AND balance = 0 ORDER BY id DESC LIMIT 1",
-            [req.query.eno]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching nil balance record");
-    }
+app.get('/api/getEmpLastNilBalRecord', authenticateToken, function(req, res) { 
+       connection.query("select * from empadvance where eno='"+req.query.eno+"' and balance = 0 ORDER BY id DESC LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** GET Employee Last Nil Balance Record If balance amount 0 not found******
-app.get('/api/getEmpLastNilBalRecordBalZeroNotFound', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM empadvancetransaction WHERE eno = ? LIMIT 1",
-            [req.query.eno]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching fallback balance record");
-    }
+app.get('/api/getEmpLastNilBalRecordBalZeroNotFound', authenticateToken, function(req, res) { 
+       connection.query("select * from empadvance where eno='"+req.query.eno+"' LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** GET Employee Due Records ****** 
-app.get('/api/getEmpDueRecords', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM empadvancetransaction WHERE id >= ? AND eno = ? ORDER BY id DESC",
-            [req.query.id, req.query.eno]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching due records");
-    }
+app.get('/api/getEmpDueRecords', authenticateToken, function(req, res) { 
+       connection.query("select * from empadvance where id >= '"+req.query.id+"' and  eno = '"+req.query.eno+"' ORDER BY id DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 
 // ***** Add Sales Calculation ******
-app.post('/api/addSalecalculation', authenticateToken, async (req, res) => { 
-    try {
-        // req.body contains the counts for 2000, 500, 200, 100, etc.
-        const [result] = await pool.query('INSERT INTO salecalculation SET ?', [req.body]);
-        res.json({ status: 'success', insertId: result.insertId });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error adding sales calculation");
-    }
+app.post('/api/addSalecalculation', authenticateToken, function(req, res) { 
+	connection.query('INSERT INTO salecalculation SET ?', req.body, function(err, result) {
+   // Neat!
+    if(err) throw err;
+		res.json(result);
+	});     
 });
 
 
 // ***** get sale calculation yesterday's change amount'******	
-app.get('/api/saleCalDate', authenticateToken, async (req, res) => {  
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM salecalculation WHERE date = ? ORDER BY id DESC",
-            [req.query.date]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error checking sales calculation date");
-    }
+app.get('/api/saleCalDate', authenticateToken, function(req, res) {  
+     
+       connection.query("SELECT * FROM salecalculation where sDate='"+req.query.cDate+"'",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 // ***** UPDATE sale calculation ******
-app.post('/api/updateSaleCalculation', authenticateToken, async (req, res) => {      
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
+app.post('/api/updateSaleCalculation', authenticateToken, function(req, res) {   
 
-        const { 
-            n2000, n500, n200, n100, n50, n20, n10, n5, n2, n1, 
-            totalAmount, date, id 
-        } = req.body;
-
-        const query = `
-            UPDATE salecalculation 
-            SET n2000=?, n500=?, n200=?, n100=?, n50=?, n20=?, n10=?, n5=?, n2=?, n1=?, 
-                totalAmount=?, date=? 
-            WHERE id=?
-        `;
-
-        const [result] = await connection.query(query, [
-            n2000, n500, n200, n100, n50, n20, n10, n5, n2, n1, 
-            totalAmount, date, id
-        ]);
-
-        await connection.commit();
+	  connection.query("UPDATE salecalculation SET c2000 = ?, c500 = ?, c200 = ?, c100 = ?, c50 = ?, c20 = ?, c10 = ?, cash = ?, paytm = ?, bhim = ?, sChange = ?, shopSale = ?, laptopSale = ?, swiggy = ?, zomato = ?, expences = ?   WHERE sDate = ?", [req.body.c2000, req.body.c500, req.body.c200, req.body.c100, req.body.c50, req.body.c20, req.body.c10, req.body.cash, req.body.paytm, req.body.bhim, req.body.sChange, req.body.shopSale, req.body.laptopSale, req.body.swiggy, req.body.zomato, req.body.expences, req.body.sDate],
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) {
-        await connection.rollback();
-        console.error(err);
-        res.status(500).send("Error updating sales calculation");
-    } finally {
-        connection.release();
-    }
-});
+        });
+		    
+    });
 	
 // ***** Sale calculation report ******
-app.get('/api/getCalcReport', authenticateToken, async (req, res) => { 
-    try {
-        const { FromDate, ToDate } = req.query;
-        // Default to FromDate if ToDate is not provided
-        const finalToDate = (ToDate && ToDate !== "undefined") ? ToDate : FromDate;
+ app.get('/api/getCalcReport', authenticateToken, function(req, res) {  
+var itemno = req.query.itemno;
+var startDate = req.query.startDate; 
+var endDate = req.query.endDate; 
+       connection.query("SELECT * FROM salecalculation where sDate >= '"+startDate+"' and sDate <= '"+endDate+"' ORDER BY sDate DESC",function(err, result){
 
-        const query = `
-            SELECT * FROM salecalculation 
-            WHERE date >= ? AND date <= ? 
-            ORDER BY date ASC
-        `;
-
-        const [results] = await pool.query(query, [FromDate, finalToDate]);
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching sales report");
-    }
-});
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+            
+             res.json(result)
+            })  
+    });	
 	
 // ***** Add Pav Entry******
-app.post('/api/addPavEntry', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query('INSERT INTO pavtransaction SET ?', [req.body]);
-        res.json({ status: 'success', insertId: result.insertId });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error adding pav entry");
-    }
+app.post('/api/addPavEntry', authenticateToken, function(req, res) {  
+	connection.query('INSERT INTO paventry SET ?', req.body, function(err, result) {
+    if(err) throw err;
+		res.json(result);
+	});     
 });
 
 // ***** Pav Entry: Check whether existing entry for today's date''******	
-app.get('/api/pavEntryDate', authenticateToken, async (req, res) => {  
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM pavtransaction WHERE tranDate = ? ORDER BY id DESC",
-            [req.query.tranDate]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error checking pav entry date");
-    }
+app.get('/api/pavEntryDate', authenticateToken, function(req, res) {  
+       connection.query("SELECT * FROM paventry where tranDate='"+req.query.tranDate+"' ORDER BY pno DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 
 // ***** UPDATE sale calculation ******
-app.post('/api/updatePavEntry', authenticateToken, async (req, res) => {      
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        const { tranDate, pName, pID, pTotal, pPaid, balance, id } = req.body;
-        
-        const query = `
-            UPDATE pavtransaction 
-            SET tranDate = ?, pName = ?, pID = ?, pTotal = ?, pPaid = ?, balance = ? 
-            WHERE id = ?
-        `;
-
-        const [result] = await connection.query(query, [
-            tranDate, pName, pID, pTotal, pPaid, balance, id
-        ]);
-
-        await connection.commit();
+app.post('/api/updatePavEntry', authenticateToken, function(req, res) {      
+	  
+	  connection.query("UPDATE paventry SET orderedPav = ?, returnPav = ?, paidPav = ?, balance = ?, note = ?  WHERE tranDate = ?", [req.body.orderedPav, req.body.returnPav, req.body.paidPav, req.body.balance, req.body.note, req.body.tranDate],
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) {
-        await connection.rollback();
-        console.error(err);
-        res.status(500).send("Error updating pav entry");
-    } finally {
-        connection.release();
-    }
-});
+        });
+		    
+    });
 	
 	
 // ***** GET Pav Entry Balance ******
-app.get('/api/pavEntryBalance', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM pavtransaction WHERE pID = ? ORDER BY id DESC LIMIT 1",
-            [req.query.pID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching pav balance");
-    }
+app.get('/api/pavEntryBalance', authenticateToken, function(req, res) { 
+       connection.query("select * from paventry ORDER BY pno DESC LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** GET Last Nil Balance Record ******
-app.get('/api/getLastNilBalRecord', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM pavtransaction WHERE pID = ? AND balance = 0 ORDER BY id DESC LIMIT 1",
-            [req.query.pID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching nil balance record");
-    }
+app.get('/api/getLastNilBalRecord', authenticateToken, function(req, res) { 
+       connection.query("select * from paventry where balance = 0 ORDER BY pno DESC LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** GET Due Records ****** req.query.pno
-app.get('/api/getDueRecords', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM pavtransaction WHERE id >= ? AND pID = ? ORDER BY id DESC",
-            [req.query.id, req.query.pID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching pav due records");
-    }
+app.get('/api/getDueRecords', authenticateToken, function(req, res) { 
+       connection.query("select * from paventry where pno >= '"+req.query.pno+"' ORDER BY pno DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 	// ***** GET Pav DATA ******
-app.get('/api/getPavData', authenticateToken, async (req, res) => {
-    try {
-        const [result] = await pool.query('SELECT * FROM pavmaster');
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching pav data");
-    }
+app.get('/api/getPavData', authenticateToken, function(req, res) {      
+     var startDate = req.query.startDate; 
+	 var endDate = req.query.endDate; 
+       connection.query("select * from paventry where tranDate >= '"+startDate+"' and tranDate <= '"+endDate+"' ORDER BY pno DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 	// ***** GET Custome Bill Search  ******
-app.get('/api/getCustBill', authenticateToken, async (req, res) => {  
-    try {
-        const { cID, date } = req.query;
+app.get('/api/getCustBill', authenticateToken, function(req, res) {      
+     var billDate = req.query.billDate; 
+	 var cname = req.query.cname; 
+       connection.query("select * from bills where date = '"+billDate+"' and cname LIKE '%"+cname+"%' ORDER BY billno DESC",function(err, result){
 
-        // If a date is provided, filter by both Customer ID and Date. 
-        // Otherwise, fetch all bills for that customer.
-        let query;
-        let params;
-
-        if (date && date !== "undefined") {
-            query = "SELECT * FROM farsancusttransaction WHERE cID = ? AND tranDate = ? ORDER BY id DESC";
-            params = [cID, date];
-        } else {
-            query = "SELECT * FROM farsancusttransaction WHERE cID = ? ORDER BY id DESC";
-            params = [cID];
-        }
-
-        const [results] = await pool.query(query, params);
-        res.json(results);
-    } catch (err) {
-        console.error("Get Customer Bill Error:", err);
-        res.status(500).send("Error fetching customer bills");
-    }
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** GET Farsan Customers DATA ******
-app.get('/api/getFarsanCustData', authenticateToken, async (req, res) => {
-    try {
-        const [result] = await pool.query('SELECT * FROM farsancustomer');
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching farsan customer data");
-    }
+app.get('/api/getFarsanCustData', authenticateToken, function(req, res) {      
+     
+       connection.query('select * from farsancustomers',function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** Add Farsan Customer ******
-app.post('/api/addFarsanCustomer', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query('INSERT INTO farsancustomer SET ?', [req.body]);
-        res.json({ status: 'success', insertId: result.insertId });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error adding farsan customer");
-    }
-});
+app.post('/api/addFarsanCustomer', authenticateToken, function(req, res) { 
+	connection.query('INSERT INTO farsancustomers SET ?', req.body, function(err, result) {
+   // Neat!
+    if(err) throw err;
+		res.json(result);
+	});
+     
+    });
 	
 // ***** UPDATE Farsan Customer DATA ******
-app.post('/api/updateFarsanCustomer', authenticateToken, async (req, res) => {      
-    try {
-        const { cName, cAdd, mobileNo, cID } = req.body;
-        const [result] = await pool.query(
-            'UPDATE farsancustomer SET cName = ?, cAdd = ?, mobileNo = ? WHERE cID = ?', 
-            [cName, cAdd, mobileNo, cID]
-        );
+app.post('/api/updateFarsanCustomer', authenticateToken, function(req, res) {  
+	  connection.query("UPDATE farsancustomers SET name = ?, cadd = ?, area = ?, mobileno = ?, joindate = ?   WHERE cno = ?", [req.body.name, req.body.cadd, req.body.area, req.body.mobileno, req.body.joindate, req.body.cno],
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error updating farsan customer");
-    }
-});
+        });
+		    
+    });
 	
 
 // ***** GET Farsan Custome Bill Balance ******
-app.get('/api/getCustBalance', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM farsancusttransaction WHERE cID = ? ORDER BY id DESC LIMIT 1",
-            [req.query.cID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching customer balance");
-    }
+app.get('/api/getCustBalance', authenticateToken, function(req, res) { 
+       connection.query("select * from farsanentry where cno='"+req.query.cno+"' ORDER BY id DESC LIMIT 1",function(err, result){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 // ***** Add Employee Advance******
-app.post('/api/addFarsanCustEntry', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query('INSERT INTO farsancusttransaction SET ?', [req.body]);
-        res.json({ status: 'success', insertId: result.insertId });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error adding customer entry");
-    }
+app.post('/api/addFarsanCustEntry', authenticateToken, function(req, res) { 
+	connection.query('INSERT INTO farsanentry SET ?', req.body, function(err, result) {
+    if(err) throw err;
+		res.json(result);
+	});     
 });
 
 // ***** Farsan Bill Entry: Check whether existing entry for today's date''******	
-app.get('/api/billEntryDate', authenticateToken, async (req, res) => {  
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM farsancusttransaction WHERE tranDate = ? ORDER BY id DESC",
-            [req.query.tranDate]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error checking bill entry date");
-    }
+app.get('/api/billEntryDate', authenticateToken, function(req, res) { 
+       connection.query("SELECT * FROM farsanentry where trandate='"+req.query.trandate+"' ORDER BY id DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 // ***** GET Farsan Cust Bill Last Nil Balance Record ******
-app.get('/api/getCustBillLastNilBalRecord', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM farsancusttransaction WHERE cID = ? AND balance = 0 ORDER BY id DESC LIMIT 1",
-            [req.query.cID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching nil balance record");
-    }
-});
+ app.get('/api/getCustBillLastNilBalRecord', authenticateToken, function(req, res) { 
+       connection.query("select * from farsanentry where cno='"+req.query.cno+"' and balance = 0 ORDER BY id DESC LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
+}); 
 
 // ***** GET Farsan Cust Last Nil Balance Record If balance amount 0 not found******
-app.get('/api/getCustBillLastNilBalRecordBalZeroNotFound', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM farsancusttransaction WHERE cID = ? LIMIT 1",
-            [req.query.cID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching fallback record");
-    }
-});
+app.get('/api/getCustBillLastNilBalRecordBalZeroNotFound', authenticateToken, function(req, res) { 
+       connection.query("select * from farsanentry where cno='"+req.query.cno+"' LIMIT 1",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
+}); 
 
 
 
 // ***** GET Farsan Cust Due Records ****** 
-app.get('/api/getFarsanCustDueRecords', authenticateToken, async (req, res) => { 
-    try {
-        const [result] = await pool.query(
-            "SELECT * FROM farsancusttransaction WHERE id >= ? AND cID = ? ORDER BY id DESC",
-            [req.query.id, req.query.cID]
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching due records");
-    }
+app.get('/api/getFarsanCustDueRecords', authenticateToken, function(req, res) { 
+       connection.query("select * from farsanentry where id >= '"+req.query.id+"' and  cno = '"+req.query.cno+"' ORDER BY id DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }            
+             res.json(result)
+            })  
 });
 
 
 // ***** Search Vendor Bills ******	
-app.get('/api/searchFarsanCustBills', authenticateToken, async (req, res) => {
-    try {
-        const { cID, FromDate, ToDate } = req.query;
-        const finalToDate = (ToDate && ToDate !== "undefined") ? ToDate : FromDate;
+app.get('/api/searchFarsanCustBills', authenticateToken, function(req, res) {  
+	var cno = req.query.cno;
+	var startDate = req.query.startDate; 
+	var endDate = req.query.endDate; 
+       connection.query("SELECT * FROM farsanentry where cno='"+cno+"' and packeddate >= '"+startDate+"' and packeddate <= '"+endDate+"' ORDER BY id DESC",function(err, result){
 
-        const [results] = await pool.query(
-            "SELECT * FROM farsancusttransaction WHERE cID = ? AND tranDate >= ? AND tranDate <= ? ORDER BY id ASC",
-            [cID, FromDate, finalToDate]
-        );
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error searching customer bills");
-    }
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 // ***** get Products yearly report ******	
-app.get('/api/getYearlyProductsSale', authenticateToken, async (req, res) => {
-    try {
-        const { itemno, year } = req.query;
-        // This query sums up quantities grouped by month for a specific item and year
-        const query = `
-            SELECT MONTH(date) as month, SUM(qty) as totalQty 
-            FROM bills 
-            WHERE itemno = ? AND YEAR(date) = ? 
-            GROUP BY MONTH(date) 
-            ORDER BY month ASC
-        `;
-        const [results] = await pool.query(query, [itemno, year]);
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error generating yearly sale report");
-    }
+app.get('/api/getYearlyProductsSale', authenticateToken, function(req, res) {  
+	var cno = req.query.cno;
+	var startDate = req.query.year+"-1-1"; 
+	var endDate = req.query.year+"-12-31"; 
+       connection.query("SELECT * FROM farsanentry where cno='"+cno+"' and packeddate >= '"+startDate+"' and packeddate <= '"+endDate+"' ORDER BY id DESC",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 
 // ***** GET Table Bill ******
-app.get('/api/getBillForTable', authenticateToken, async (req, res) => {
-    try {
-        const { tableno, date } = req.query;
-        // Fetches items for a table that haven't been 'cleared' or paid yet
-        const [results] = await pool.query(
-            "SELECT * FROM bills WHERE tableno = ? AND date = ? ORDER BY id ASC",
-            [tableno, date]
-        );
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching table bill");
-    }
-});
+ app.get('/api/getBillForTable', authenticateToken, function(req, res) {  
+var tableNo = req.query.tableNo; 
+       connection.query("SELECT * FROM bills where tableno='"+tableNo+"' and billstatus='unpaid'",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
+    });
 
 // ***** GET all Kitchen Orders table 500 ie customer parcel******
-app.get('/api/getOrdersByDate', authenticateToken, async (req, res) => {
-    try {
-        const { date } = req.query;
-        const [results] = await pool.query(
-            "SELECT * FROM bills WHERE date = ? ORDER BY id DESC",
-            [date]
-        );
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching orders");
-    }
-});
+ app.get('/api/getOrdersByDate', authenticateToken, function(req, res) {  
+//var tableNo = req.query.tableNo; 
+       connection.query("SELECT * FROM bills where date='"+req.query.date+"' and waitername='"+req.query.waiterName+"' and foodstatus!='' ORDER BY bill_id",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+            
+             res.json(result)
+            })  
+    });	
 
 // ***** GET all Kitchen Orders ******
-app.get('/api/getAllKitchenOrders', authenticateToken, async (req, res) => {
-    try {
-        const { date } = req.query;
-        // Typically used for the KOT (Kitchen Order Ticket) display
-        // We filter out self-dinein/parcel if needed, or show all based on your logic
-        const [results] = await pool.query(
-            "SELECT * FROM bills WHERE date = ? ORDER BY id ASC", 
-            [date]
-        );
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching kitchen orders");
-    }
-});
+ app.get('/api/getAllKitchenOrders', authenticateToken, function(req, res) {  
+//var tableNo = req.query.tableNo; 
+       connection.query("SELECT * FROM bills where foodstatus='preparing' and  waitername='"+req.query.waiterName+"' ORDER BY bill_id",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+            
+             res.json(result)
+            })  
+    });	
 
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/markOrderReady', authenticateToken, async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        // Expects bill_id or unique ID to mark a specific item/order as prepared
-        const { id, isReady } = req.body;
-
-        const [result] = await connection.query(
-            "UPDATE bills SET isReady = ? WHERE id = ?",
-            [isReady, id]
-        );
-
-        await connection.commit();
-        res.json({ status: 'success', affectedRows: result.affectedRows });
-    } catch (err) {
-        await connection.rollback();
-        console.error("Mark Order Ready Error:", err);
-        res.status(500).send("Error updating order status");
-    } finally {
-        connection.release();
-    }
+app.post('/api/markOrderReady', authenticateToken, function(req, res) { 
+	 var foodready  = 'ready',  foodpreparing = 'preparing';	 
+	connection.query('UPDATE bills SET foodstatus = ? WHERE billno = ? AND foodstatus = ?', [foodready, req.body.billno, foodpreparing], 
+	function(err, result){
+        if(err) throw err;
+        res.json(result);
+        });     
 });
 	
 // ***** GET all unpaid Orders ******	
-app.get('/api/getAllUnpaidOrders', authenticateToken, async (req, res) => {
-    try {
-        const { date } = req.query;
+ app.get('/api/getAllUnpaidOrders', authenticateToken, function(req, res) {
+       connection.query("SELECT tableno, foodstatus FROM bills where billstatus='unpaid' ORDER BY billno",function(err, result){
 
-        // Fetches all orders for the day where payment is pending
-        // Adjust 'status' or 'isPaid' column name based on your actual schema
-        const query = `
-            SELECT * FROM bills 
-            WHERE date = ? 
-            AND (waitername = 'self-dinein' OR waitername = 'self-parcel')
-            ORDER BY id DESC
-        `;
-
-        const [results] = await pool.query(query, [date]);
-        res.json(results);
-    } catch (err) {
-        console.error("Fetch Unpaid Orders Error:", err);
-        res.status(500).send("Error fetching unpaid orders");
-    }
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+             res.json(result)
+            })  
 });
 	
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/paidTableBill', authenticateToken, async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        const { tableno, date, waitername } = req.body;
-
-        // Move items to a history/archive if needed, or update status
-        // Here we update waitername to 'paid' or a similar identifier
-        const [result] = await connection.query(
-            "UPDATE bills SET waitername = ? WHERE tableno = ? AND date = ?",
-            [`paid-${waitername}`, tableno, date]
-        );
-
-        await connection.commit();
-        res.json({ status: 'success', affectedRows: result.affectedRows });
-    } catch (err) {
-        await connection.rollback();
-        console.error("Paid Table Bill Error:", err);
-        res.status(500).send("Error processing payment");
-    } finally {
-        connection.release();
-    }
+app.post('/api/paidTableBill', authenticateToken, function(req, res) {
+	 var billStatus  = 'paid';
+	 
+	connection.query('UPDATE bills SET billstatus = ? WHERE billno = ?', [billStatus, req.body.billno], 
+	function(err, result){
+        if(err) throw err;
+        res.json(result.affectedRows);
+        });
+     
 });
 
 // ***** Mark Order Ready From Kitchen ******
-app.post('/api/removeBillItem', authenticateToken, async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        const { id } = req.body; // Unique ID of the row in bills table
-
-        const [result] = await connection.query("DELETE FROM bills WHERE id = ?", [id]);
-
-        await connection.commit();
-        res.json({ status: 'success', message: 'Item removed' });
-    } catch (err) {
-        await connection.rollback();
-        res.status(500).send("Error removing item");
-    } finally {
-        connection.release();
-    }
+app.post('/api/removeBillItem', authenticateToken, function(req, res) { 	 
+	connection.query('DELETE from bills WHERE bill_id = ?', [req.body.bill_id], 
+	function(err, result){
+        if(err) throw err;
+        res.json(result.affectedRows);
+    });     
 });
 
 
 // ***** Add pending Orders - Bhaji Vadi Coffee******	
-app.post('/api/addPendingOrders', authenticateToken, async (req, res) => {
-    try {
-        // req.body is an array or object containing order details
-        const [result] = await pool.query("INSERT INTO pendingorders SET ?", [req.body]);
-        res.json({ status: 'success', insertId: result.insertId });
-    } catch (err) {
-        res.status(500).send("Error adding pending order");
-    }
+app.post('/api/addPendingOrders', authenticateToken, function(req, res) {  
+	var inserts = [];
+	if(Number(req.body.qty_bhaji)>0)
+		inserts.push(['B', Number(req.body.qty_bhaji), req.body.cName, req.body.status, req.body.date]);
+	if(Number(req.body.qty_vadi)>0)
+		inserts.push(['V', Number(req.body.qty_vadi), req.body.cName, req.body.status, req.body.date]);
+	if(Number(req.body.qty_coffee)>0)
+		inserts.push(['C', Number(req.body.qty_coffee), req.body.cName, req.body.status, req.body.date]);
+		
+	var sql = "INSERT INTO orders (itemName, qty, cName, status, date) VALUES ?";
+		connection.query(sql, [inserts], function(err, result) {
+		if(err) throw err;
+			res.json(result.affectedRows);
+		});
+	 
 });
 
 // ***** GET all pending Orders - Bhaji Vadi Coffee ******	
-app.get('/api/getAllPendingOrders', authenticateToken, async (req, res) => {
-    try {
-        const { date } = req.query;
-        // Show orders that are NOT ready yet, oldest first
-        const [results] = await pool.query(
-            "SELECT * FROM pendingorders WHERE date = ? AND isReady = 0 ORDER BY id ASC",
-            [date]
-        );
-        res.json(results);
-    } catch (err) {
-        res.status(500).send("Error fetching pending orders");
-    }
+ app.get('/api/getAllPendingOrders', authenticateToken, function(req, res) {  
+
+       connection.query("SELECT id, itemName, cName, qty FROM orders where date='"+req.query.date+"' AND status='P' ORDER BY status",function(err, result){
+
+             if (err){
+                res.send(err);
+             }            
+				res.json(result);
+            })  
 });
 
 
 // ***** Mark Pending Order Ready - Bhaji Vadi Coffee ******
-app.post('/api/markPendingOrderReady', authenticateToken, async (req, res) => {
-    try {
-        const { id } = req.body;
-        const [result] = await pool.query(
-            "UPDATE pendingorders SET isReady = 1 WHERE id = ?",
-            [id]
-        );
-        res.json({ status: 'success' });
-    } catch (err) {
-        res.status(500).send("Error updating order status");
-    }
+app.post('/api/markPendingOrderReady', authenticateToken, function(req, res) { 
+	 var status  = 'R';	 
+	connection.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.body.id], 
+	function(err, result){
+        if(err) throw err;
+        res.json(result.message);
+        });
+     
 });
 
 // ***** UPDATE Pending Orders DATA - Bhaji Vadi Coffee******
-app.post('/api/updatePendingOrders', authenticateToken, async (req, res) => {
-    try {
-        const { qty, id } = req.body;
-        const [result] = await pool.query(
-            "UPDATE pendingorders SET qty = ? WHERE id = ?",
-            [qty, id]
-        );
-        res.json({ status: 'success' });
-    } catch (err) {
-        res.status(500).send("Error updating order");
-    }
+app.post('/api/updatePendingOrders', authenticateToken, function(req, res) {
+	
+	  var tmpQty = 0;
+	  if(req.body.qty_bhaji!=undefined){
+		tmpQty = req.body.qty_bhaji;
+	  }else if(req.body.qty_vadi!=undefined){
+		tmpQty = req.body.qty_vadi;
+	  }else{
+		tmpQty = req.body.qty_coffee;
+	  }
+	  connection.query("UPDATE orders SET cName = ?, qty = ? WHERE id = ?", [req.body.cName, tmpQty, req.body.id],
+	function(err, result){
+        if(err) throw err;
+        res.json(result.message);
+        });		    
 });
 
 // ***** Clear Bills Data- Delete Data ******
-app.post('/api/clearBills', authenticateToken, async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        // 1. Copy specific customer info to a permanent storage table
-        const copyQuery = `
-            INSERT INTO customerData (bill_id, cname, mobileno, waitername) 
-            SELECT bill_id, cname, mobileno, waitername 
-            FROM bills 
-            WHERE waitername IN ('self-dinein', 'self-parcel')
-        `;
-        await connection.query(copyQuery);
-
-        // 2. Delete all records EXCEPT for the current date provided
-        const deleteQuery = "DELETE FROM bills WHERE date != ?";
-        const [result] = await connection.query(deleteQuery, [req.body.date]);
-
-        await connection.commit();
-        res.json({ status: 'success', deletedRows: result.affectedRows });
-    } catch (err) {
-        await connection.rollback();
-        console.error("Clear Bills Error:", err);
-        res.status(500).send("Error clearing bills");
-    } finally {
-        connection.release();
-    }
+app.post('/api/clearBills', authenticateToken, function(req, res) { 
+	connection.query("INSERT INTO customerData SELECT bill_id, cname, mobileno, waitername  FROM bills where bills.waitername='self-dinein' or bills.waitername='self-parcel'",function(err, result1){
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+				
+			 connection.query("DELETE from bills WHERE date != ?", [req.body.date], 
+				function(err, result2){
+					if(err) throw err;
+					res.json({ data1: result1, data2: result2.affectedRows }); //res.json(result.affectedRows);
+					
+				});
+	
+			});
+	
+	/*connection.query("DELETE from bills WHERE date != ? and waitername!='self-dinein' and waitername!='self-parcel'", [req.body.date], 
+	function(err, result){
+        if(err) throw err;
+        res.json(result.affectedRows);
+    });  */   
 });
 
 // ***** Clear Pending Orders- Delete Data ******
-app.post('/api/clearPendingOrder', authenticateToken, async (req, res) => {
-    try {
-        // Typically used at the end of the shift to wipe the KOT screen
-        const [result] = await pool.query("DELETE FROM pendingorders WHERE date = ?", [req.body.date]);
-        res.json({ status: 'success', deletedRows: result.affectedRows });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error clearing pending orders");
-    }
+app.post('/api/clearPendingOrder', authenticateToken, function(req, res) { 
+	connection.query('DELETE from orders WHERE date != ?', [req.body.date], 
+	function(err, result){
+        if(err) throw err;
+        res.json(result.affectedRows);
+    });     
 });
 
 // ***** GET restaurant Info  ******
-app.get('/api/restaurantInfo', async (req, res) => {  
-    try {
-        const [result] = await pool.query("SELECT dinein_online, parcel_online FROM restaurantInfo LIMIT 1");
-        res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error fetching restaurant info");
-    }
+ app.get('/api/restaurantInfo', function(req, res) {  
+       connection.query("SELECT dinein_online, parcel_online FROM restaurantInfo",function(err, result){
+
+             if (err){
+                res.send(err);
+                console.log(err);
+             }
+            
+             res.json(result)
+            })  
 });
 
 // ***** UPDATE restaurant info ******
-app.post('/api/updateResturantInfo', authenticateToken, async (req, res) => {      
-    try {
-        const { dineinOnline, parcelOnline } = req.body;
-        
-        // We assume the settings are stored in row with ID 1
-        const [result] = await pool.query(
-            'UPDATE restaurantInfo SET dinein_online = ?, parcel_online = ? WHERE id = 1', 
-            [dineinOnline, parcelOnline]
-        );
+app.post('/api/updateResturantInfo', authenticateToken, function(req, res) {      
+	connection.query('UPDATE restaurantInfo SET dinein_online = ?, parcel_online = ? WHERE id = 1', [ ""+req.body.dineinOnline+"", ""+req.body.parcelOnline+""], 
+	function(err, result){
+        if(err) throw err;
         res.json(result);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error updating restaurant settings");
-    }
+        });     
 });
 
 
+
+
+//Get IpAddress
+app.get('/api/getIpAdd', function(req, res) {
+   var os = require('os'),
+     interfaces = os.networkInterfaces(),
+     address,
+     addresses = [],
+     i,
+     l,
+     interfaceId,
+     interfaceArray;
+
+	 for (interfaceId in interfaces) {
+		 if (interfaces.hasOwnProperty(interfaceId)) {
+			 interfaceArray = interfaces[interfaceId];
+			 l = interfaceArray.length;
+
+			 for (i = 0; i < l; i += 1) {
+
+				 address = interfaceArray[i];
+
+				 if (address.family === 'IPv4' && !address.internal) {
+					 addresses.push(address.address);
+				 }
+			 }
+		 }
+	 }
+	res.json(addresses);  
+});
 	const port = process.env.PORT || 3000;
 // Binding express app to port 3000
 app.listen(port, '0.0.0.0',function(){
