@@ -64,31 +64,45 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-app.post('/api/login', async (req, res) => {
+pp.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Get the data from the database
+        // 1. Fetch from DB
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
-        // 2. Check if the array is empty
-        if (rows.length === 0) {
+        // 2. Check if anything was returned
+        if (!rows || rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        // 3. CRITICAL STEP: Extract the object from the array
+        // 3. THE FIX: Access the first record
         const user = rows; 
 
-        // 4. VERIFICATION: This will now show your actual column names
-        console.log("Actual Columns in User Object:", Object.keys(user));
+        // 4. LOG CHECK - If this says ['0'], we have a nested array issue
+        console.log("Keys found:", Object.keys(user));
 
-        // 5. Now user.password will exist because 'user' is the object, not the array
-        if (!user.password || !bcrypt.compareSync(password, user.password)) {
+        // 5. Check password - using lowercase 'password' as you confirmed
+        if (!user.password) {
+            // If it still shows ['0'], this safety line will catch it:
+            const backupUser = Array.isArray(user) ? user : user;
+            
+            if (!backupUser.password || !bcrypt.compareSync(password, backupUser.password)) {
+                return res.status(401).send('Invalid password or column missing');
+            }
+            
+            // If backup worked, use that for the token
+            const token = jwt.sign({ id: backupUser.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
+            return res.status(200).send({ auth: true, token });
+        }
+
+        // 6. Normal Flow
+        if (!bcrypt.compareSync(password, user.password)) {
             return res.status(401).send('Invalid password');
         }
 
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
-        res.status(200).send({ auth: true, token: token });
+        res.status(200).send({ auth: true, token });
 
     } catch (err) {
         console.error("Login Error:", err);
