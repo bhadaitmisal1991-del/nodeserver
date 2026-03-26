@@ -107,17 +107,15 @@ app.post('/api/addToken', async (req, res) => {
 	const conn = await pool.getConnection();
 	try {
 		await conn.beginTransaction();
-		console.log("innn   Token No---- ");
 		// 1. Get the last token for TODAY and LOCK the row (FOR UPDATE)
         const [rows] = await conn.query(
             "SELECT tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE",
             [req.body.date]
         );
-		console.log("Token No---- "+JSON.stringify(rows));
-		console.log("Token No---- "+rows[0]);
+		console.log("rows ---- "+JSON.stringify(rows));
 		console.log("Token No---- "+rows[0].tokenNo);
-		let lastToken = (rows[0].length > 0) ? rows[0].tokenNo : 0;
-		
+		let lastToken = (rows.length > 0) ? rows[0].tokenNo : 0;
+		console.log("lastToken---- "+lastToken);
 		if (lastToken === null || lastToken === undefined) {
             lastToken = 0;
         }
@@ -129,7 +127,7 @@ app.post('/api/addToken', async (req, res) => {
         } else {
             newToken = lastToken + 1;
         }
-		console.log("Token No---- "+newToken);
+		console.log(" newToken Token No---- "+newToken);
 		const billData = { ...req.body, tokenNo: newToken };
 		
         await conn.query("INSERT INTO bills SET ?", [billData]);
