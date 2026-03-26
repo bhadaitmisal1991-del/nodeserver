@@ -35,7 +35,7 @@ const pool = mysql.createPool({
 // --- 2. Authentication Middleware ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    // Use to get the token part of "Bearer <token>"
+    // Use to get the actual string after "Bearer "
     const token = authHeader && authHeader.split(' '); 
     
     if (!token) return res.sendStatus(401);
@@ -68,37 +68,38 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Fetch user
+        // 1. [rows] destructuring gets the array of results from the promise
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
+        // 2. Check if any user was found
         if (!rows || rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        const user = rows;
+        // 3. THIS IS THE FIX:
+        // 'rows' is [ {id: 1, email: '...', password: '...'} ]
+        // We need the first element of that array.
+        const user = rows; 
 
-        // --- THE DETECTOR ---
-        // This finds the password column regardless of P or p casing
-        const passwordKey = Object.keys(user).find(key => key.toLowerCase() === 'password');
-        const storedHash = passwordKey ? user[passwordKey] : null;
+        // 4. Now this log will show: [ 'id', 'email', 'password' ]
+        console.log("Actual Columns in User Object:", Object.keys(user));
 
-        if (!storedHash) {
-            console.error("DEBUG: Available columns in your table are:", Object.keys(user));
-            return res.status(500).send(`Internal server error: No password column found. Available: ${Object.keys(user).join(', ')}`);
+        // 5. Compare the password
+        if (!user.password) {
+            return res.status(500).send('Database Error: password column missing in table');
         }
 
-        // 2. Compare
-        const isMatch = bcrypt.compareSync(password, storedHash);
+        const isMatch = bcrypt.compareSync(password, user.password);
         if (!isMatch) {
             return res.status(401).send('Invalid password');
         }
 
-        // 3. Token
-        const token = jwt.sign({ id: user.id || user.ID }, process.env.JWT_SECRET, { expiresIn: '12h' });
+        // 6. Generate Token
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
 
     } catch (err) {
-        console.error("Login Crash:", err);
+        console.error("Login Error:", err);
         res.status(500).send('Login error');
     }
 });
