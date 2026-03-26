@@ -84,7 +84,7 @@ app.post('/api/login', async (req, res) => {
 
         // 3. Debugging/Safety Check: Ensure user.password exists in DB result
         // Note: Check if your DB column is 'password' or 'Password'
-        const storedHash = user.password || user.password; 
+        const storedHash = user.password; 
 
         if (!storedHash) {
             console.error("Database Error: Password column not found in results. Check your column names.");
