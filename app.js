@@ -64,7 +64,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-pp.post('/api/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
