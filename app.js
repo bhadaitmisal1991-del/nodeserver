@@ -62,20 +62,21 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-app.post('/api/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const [results] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-        if (results.length === 0) return res.status(401).send('User not found');
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
 
-        const user = results;
-        if (!bcrypt.compareSync(password, user.password)) return res.status(401).send('Invalid password');
+    connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+        if (err || results.length === 0) return res.status(401).send('User not found');
+
+        const user = results[0];
+        const passwordIsValid = bcrypt.compareSync(password, user.password);
+
+        if (!passwordIsValid) return res.status(401).send('Invalid password');
+		
 
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
-    } catch (err) {
-        res.status(500).send('Login error');
-    }
+    });
 });
 
 
