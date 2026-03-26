@@ -35,7 +35,7 @@ const pool = mysql.createPool({
 // --- 2. Authentication Middleware ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    // Fix: access the 2nd element after splitting 'Bearer <token>'
+    // Use to get the token part of "Bearer <token>"
     const token = authHeader && authHeader.split(' '); 
     
     if (!token) return res.sendStatus(401);
@@ -45,7 +45,7 @@ const authenticateToken = (req, res, next) => {
         req.user = user;
         next();
     });
-}
+};
 
 
 
@@ -67,43 +67,36 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        
-        // 1. Check if input is provided
-        if (!email || !password) {
-            return res.status(400).send('Email and password are required');
-        }
 
-        const [results] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-        
-        // 2. Check if user exists
-        if (results.length === 0) {
+        // 1. Get the rows from the query
+        const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+
+        // 2. Check if the array is empty
+        if (!rows || rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        const user = results;
+        // 3. Extract the user object
+        const user = rows;
 
-        // 3. Debugging/Safety Check: Ensure user.password exists in DB result
-        // Note: Check if your DB column is 'password' or 'Password'
-        const storedHash = user.password; 
-
-        if (!storedHash) {
-            console.error("Database Error: Password column not found in results. Check your column names.");
-            return res.status(500).send('Internal server error: Database mapping issue');
+        // 4. Verify the password exists in the object
+        if (!user.password) {
+            console.error("Columns found in DB:", Object.keys(user));
+            return res.status(500).send('Internal server error: Password column missing in query result');
         }
 
-        // 4. Compare
-        const isMatch = bcrypt.compareSync(password, storedHash);
-        
+        // 5. Compare using bcrypt
+        const isMatch = bcrypt.compareSync(password, user.password);
         if (!isMatch) {
             return res.status(401).send('Invalid password');
         }
 
-        // 5. Generate Token
+        // 6. Success - Generate Token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
 
     } catch (err) {
-        console.error("Login Error Details:", err);
+        console.error("Detailed Login Error:", err);
         res.status(500).send('Login error');
     }
 });
