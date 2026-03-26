@@ -35,15 +35,17 @@ const pool = mysql.createPool({
 // --- 2. Authentication Middleware ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' '); // Get the second part
-		if (!token) return res.sendStatus(401);
+    // Fix: access the 2nd element after splitting 'Bearer <token>'
+    const token = authHeader && authHeader.split(' '); 
+    
+    if (!token) return res.sendStatus(401);
 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) return res.sendStatus(403);
         req.user = user;
         next();
     });
-};
+}
 
 
 
@@ -65,21 +67,43 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        
+        // 1. Check if input is provided
+        if (!email || !password) {
+            return res.status(400).send('Email and password are required');
+        }
+
         const [results] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
         
-        if (results.length === 0) return res.status(401).send('User not found');
+        // 2. Check if user exists
+        if (results.length === 0) {
+            return res.status(401).send('User not found');
+        }
 
-        const user = results; // Fix: select the first user record
+        const user = results;
+
+        // 3. Debugging/Safety Check: Ensure user.password exists in DB result
+        // Note: Check if your DB column is 'password' or 'Password'
+        const storedHash = user.password || user.Password; 
+
+        if (!storedHash) {
+            console.error("Database Error: Password column not found in results. Check your column names.");
+            return res.status(500).send('Internal server error: Database mapping issue');
+        }
+
+        // 4. Compare
+        const isMatch = bcrypt.compareSync(password, storedHash);
         
-        // Verify password
-        const isMatch = bcrypt.compareSync(password, user.password);
-        if (!isMatch) return res.status(401).send('Invalid password');
+        if (!isMatch) {
+            return res.status(401).send('Invalid password');
+        }
 
-        // Sign Token
+        // 5. Generate Token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
+
     } catch (err) {
-        console.error("Login Error:", err);
+        console.error("Login Error Details:", err);
         res.status(500).send('Login error');
     }
 });
