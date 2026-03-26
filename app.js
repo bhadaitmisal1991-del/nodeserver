@@ -68,35 +68,32 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Get the rows from the query
+        // 1. Destructure correctly: [rows] gets the data, [fields] is ignored
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
-        // 2. Check if the array is empty
-        if (!rows || rows.length === 0) {
+        // 2. Check if the user exists
+        if (rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        // 3. Extract the user object
-        const user = rows;
+        // 3. Access the first row (the actual user object)
+        const user = rows; 
 
-        // 4. Verify the password exists in the object
-        if (!user.password) {
-            console.error("Columns found in DB:", Object.keys(user));
-            return res.status(500).send('Internal server error: Password column missing in query result');
-        }
+        // 4. Verification check for your console
+        console.log("Actual User Data Keys:", Object.keys(user)); 
 
-        // 5. Compare using bcrypt
-        const isMatch = bcrypt.compareSync(password, user.password);
-        if (!isMatch) {
+        // 5. Compare the password
+        // Ensure your DB column is 'password' lowercase
+        if (!user.password || !bcrypt.compareSync(password, user.password)) {
             return res.status(401).send('Invalid password');
         }
 
-        // 6. Success - Generate Token
+        // 6. Generate Token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
 
     } catch (err) {
-        console.error("Detailed Login Error:", err);
+        console.error("Login Error:", err);
         res.status(500).send('Login error');
     }
 });
