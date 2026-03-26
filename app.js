@@ -35,7 +35,7 @@ const pool = mysql.createPool({
 // --- 2. Authentication Middleware ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    // Use to get the actual string after "Bearer "
+    // FIX: split(' ') returns ["Bearer", "TOKEN"]. We need index.
     const token = authHeader && authHeader.split(' '); 
     
     if (!token) return res.sendStatus(401);
@@ -68,7 +68,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. [rows] gets the data array from the pool
+        // 1. [rows] destructuring gets the data array from the pool
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
         // 2. Check if the list is empty
@@ -76,19 +76,13 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).send('User not found');
         }
 
-        // 3. THIS IS THE FIX: 
-        // rows is [{...}], so rows is the {...} object.
-        let user = rows;
+        // 3. FIX: rows is an array, we need the first object inside it
+        const user = rows; 
 
-        // 4. EXTRA SAFETY: If Aiven returns a nested array [[{...}]], unwrap it again
-        if (Array.isArray(user)) {
-            user = user;
-        }
-
-        // 5. This log MUST now show: [ 'id', 'email', 'password' ]
+        // 4. This will now correctly show: [ 'id', 'email', 'password', ... ]
         console.log("Actual Columns in User Object:", Object.keys(user));
 
-        // 6. Check the password field
+        // 5. Check the password field
         if (!user.password) {
             return res.status(500).send('Database Error: password column not found in result');
         }
@@ -98,7 +92,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).send('Invalid password');
         }
 
-        // 7. Success
+        // 6. Success - Use user.id from the object
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
 
