@@ -62,21 +62,20 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-app.post('/api/login', (req, res) => {
-    const { email, password } = req.body;
+app.post('/api/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const [results] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (results.length === 0) return res.status(401).send('User not found');
 
-    pool.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
-        if (err || results.length === 0) return res.status(401).send('User not found');
-
-        const user = results[0];
-        const passwordIsValid = bcrypt.compareSync(password, user.password);
-
-        if (!passwordIsValid) return res.status(401).send('Invalid password');
-		
+        const user = results;
+        if (!bcrypt.compareSync(password, user.password)) return res.status(401).send('Invalid password');
 
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
-    });
+    } catch (err) {
+        res.status(500).send('Login error');
+    }
 });
 
 
@@ -170,45 +169,7 @@ app.post('/api/add', async (req, res) => {
 });
 
 // ******* Add items into bills table LOCKing api*****
- app.post('/api/addToken', function(req, res) {
-	//const { date, isToken } = req.query;
-	const conn = await pool.promise().getConnection();
-	try {
-		await conn.beginTransaction();
-		
-		// 1. Get the last token for TODAY and LOCK the row (FOR UPDATE)
-        const [rows] = await conn.query(
-            "SELECT tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY id DESC LIMIT 1 FOR UPDATE",
-            [req.body.date]
-        );
-		
-		let lastToken = (rows.length > 0) ? rows.tokenNo : 0;
-        let newToken;
 
-        // 2. Reset logic: If reaches 100, reset to 1, else +1
-        if (lastToken >= 100) {
-            newToken = 1;
-        } else {
-            newToken = lastToken + 1;
-        }
-		
-		const billData = { ...req.body, tokenNo: newToken };
-		
-        await conn.query("INSERT INTO bills SET ?", [billData]);
-        await conn.commit();
-		res.json({ response: 'success', tokenNo: newToken });
-	
-	} catch (err) {
-        // If anything fails, undo changes so the token isn't "lost"
-        await conn.rollback();
-        console.error("Token Generation Error:", err);
-        res.status(500).json({ error: "Failed to generate token", details: err.message });
-    } finally {
-        // Release the connection back to the pool
-        conn.release();
-    }
-     
-});
 	
 // ***** GET item wise sale report ******
 app.get('/api/todaysReport', authenticateToken, async (req, res) => {  
