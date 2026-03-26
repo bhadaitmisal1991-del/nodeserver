@@ -66,16 +66,20 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const [results] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+        
         if (results.length === 0) return res.status(401).send('User not found');
 
-        const user = results;
-        if (!user || !bcrypt.compareSync(password, user.password)) {
-			return res.status(401).send('Invalid password');
-		}
+        const user = results; // Fix: select the first user record
+        
+        // Verify password
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) return res.status(401).send('Invalid password');
 
+        // Sign Token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
     } catch (err) {
+        console.error("Login Error:", err);
         res.status(500).send('Login error');
     }
 });
