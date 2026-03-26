@@ -102,7 +102,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.post('/api/addToken', function(req, res) {
+app.post('/api/addToken', async (req, res) => {
 	//const { date, isToken } = req.query;
 	const conn = await pool.promise().getConnection();
 	try {
