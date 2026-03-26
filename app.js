@@ -68,32 +68,41 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Destructure correctly: [rows] gets the data, [fields] is ignored
+        // 1. Correct Destructuring: [rows] takes the first element (the data array)
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
-        // 2. Check if the user exists
-        if (rows.length === 0) {
+        // 2. Safety check: Did the query return anything?
+        if (!rows || rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        // 3. Access the first row (the actual user object)
-        const user = rows; 
+        // 3. Extract the single user object from the rows array
+        const user = rows;
 
-        // 4. Verification check for your console
-        console.log("Actual User Data Keys:", Object.keys(user)); 
+        // 4. Verification Log: This should now show ['id', 'email', 'password', ...]
+        console.log("Actual Columns in User Object:", Object.keys(user));
 
-        // 5. Compare the password
-        // Ensure your DB column is 'password' lowercase
-        if (!user.password || !bcrypt.compareSync(password, user.password)) {
+        // 5. Check if the password column exists (case-sensitive)
+        if (!user.password) {
+            return res.status(500).send('Internal server error: Password column missing in query result');
+        }
+
+        // 6. Compare passwords using bcrypt
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) {
             return res.status(401).send('Invalid password');
         }
 
-        // 6. Generate Token
+        // 7. Generate JWT
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
-        res.status(200).send({ auth: true, token: token });
+        
+        res.status(200).send({ 
+            auth: true, 
+            token: token 
+        });
 
     } catch (err) {
-        console.error("Login Error:", err);
+        console.error("Login Route Crash:", err);
         res.status(500).send('Login error');
     }
 });
