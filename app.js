@@ -65,20 +65,41 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-    await pool.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
-        if (err || results.length === 0) return res.status(401).send('User not found');
+        // 1. [rows] destructuring gets the data array from the pool
+        const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
-        const user = results[0];
-        const passwordIsValid = bcrypt.compareSync(password, user.password);
+        // 2. Check if the list is empty
+        if (!rows || rows.length === 0) {
+            return res.status(401).send('User not found');
+        }
 
-        if (!passwordIsValid) return res.status(401).send('Invalid password');
-		
+        // 3. FIX: rows is an array, we need the first object inside it
+        const user = rows[0]; 
 
+        // 4. This will now correctly show: [ 'id', 'email', 'password', ... ]
+        console.log("Actual Columns in User Object:", Object.keys(user));
+
+        // 5. Check the password field
+        if (!user.password) {
+            return res.status(500).send('Database Error: password column not found in result');
+        }
+
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) {
+            return res.status(401).send('Invalid password');
+        }
+
+        // 6. Success - Use user.id from the object
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
-    });
+
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.status(500).send('Login error');
+    }
 });
 
 
