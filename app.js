@@ -113,9 +113,9 @@ app.post('/api/addToken', async (req, res) => {
             "SELECT tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE",
             [req.body.date]
         );
-		console.log("Token No---- "+rows);
-		console.log("Token No---- "+rows.tokenNo);
-		let lastToken = (rows.length > 0) ? rows.tokenNo : 0;
+		console.log("Token No---- "+rows[0]);
+		console.log("Token No---- "+rows[0].tokenNo);
+		let lastToken = (rows[0].length > 0) ? rows[0].tokenNo : 0;
 		
 		if (lastToken === null || lastToken === undefined) {
             lastToken = 0;
