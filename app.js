@@ -68,41 +68,37 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Correct Destructuring: [rows] takes the first element (the data array)
+        // 1. Fetch user
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
-        // 2. Safety check: Did the query return anything?
         if (!rows || rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        // 3. Extract the single user object from the rows array
         const user = rows;
 
-        // 4. Verification Log: This should now show ['id', 'email', 'password', ...]
-        console.log("Actual Columns in User Object:", Object.keys(user));
+        // --- THE DETECTOR ---
+        // This finds the password column regardless of P or p casing
+        const passwordKey = Object.keys(user).find(key => key.toLowerCase() === 'password');
+        const storedHash = passwordKey ? user[passwordKey] : null;
 
-        // 5. Check if the password column exists (case-sensitive)
-        if (!user.password) {
-            return res.status(500).send('Internal server error: Password column missing in query result');
+        if (!storedHash) {
+            console.error("DEBUG: Available columns in your table are:", Object.keys(user));
+            return res.status(500).send(`Internal server error: No password column found. Available: ${Object.keys(user).join(', ')}`);
         }
 
-        // 6. Compare passwords using bcrypt
-        const isMatch = bcrypt.compareSync(password, user.password);
+        // 2. Compare
+        const isMatch = bcrypt.compareSync(password, storedHash);
         if (!isMatch) {
             return res.status(401).send('Invalid password');
         }
 
-        // 7. Generate JWT
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
-        
-        res.status(200).send({ 
-            auth: true, 
-            token: token 
-        });
+        // 3. Token
+        const token = jwt.sign({ id: user.id || user.ID }, process.env.JWT_SECRET, { expiresIn: '12h' });
+        res.status(200).send({ auth: true, token: token });
 
     } catch (err) {
-        console.error("Login Route Crash:", err);
+        console.error("Login Crash:", err);
         res.status(500).send('Login error');
     }
 });
