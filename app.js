@@ -68,33 +68,25 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. [rows] destructuring gets the array of results from the promise
+        // 1. Get the data from the database
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
-        // 2. Check if any user was found
-        if (!rows || rows.length === 0) {
+        // 2. Check if the array is empty
+        if (rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        // 3. THIS IS THE FIX:
-        // 'rows' is [ {id: 1, email: '...', password: '...'} ]
-        // We need the first element of that array.
+        // 3. CRITICAL STEP: Extract the object from the array
         const user = rows; 
 
-        // 4. Now this log will show: [ 'id', 'email', 'password' ]
+        // 4. VERIFICATION: This will now show your actual column names
         console.log("Actual Columns in User Object:", Object.keys(user));
 
-        // 5. Compare the password
-        if (!user.password) {
-            return res.status(500).send('Database Error: password column missing in table');
-        }
-
-        const isMatch = bcrypt.compareSync(password, user.password);
-        if (!isMatch) {
+        // 5. Now user.password will exist because 'user' is the object, not the array
+        if (!user.password || !bcrypt.compareSync(password, user.password)) {
             return res.status(401).send('Invalid password');
         }
 
-        // 6. Generate Token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
 
