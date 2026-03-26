@@ -69,7 +69,9 @@ app.post('/api/login', async (req, res) => {
         if (results.length === 0) return res.status(401).send('User not found');
 
         const user = results;
-        if (!bcrypt.compareSync(password, user.password)) return res.status(401).send('Invalid password');
+        if (!user || !bcrypt.compareSync(password, user.password)) {
+			return res.status(401).send('Invalid password');
+		}
 
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
         res.status(200).send({ auth: true, token: token });
