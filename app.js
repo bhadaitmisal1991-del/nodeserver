@@ -68,41 +68,39 @@ app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Fetch from DB
+        // 1. [rows] gets the data array from the pool
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
-        // 2. Check if anything was returned
+        // 2. Check if the list is empty
         if (!rows || rows.length === 0) {
             return res.status(401).send('User not found');
         }
 
-        // 3. THE FIX: Access the first record
-        const user = rows; 
+        // 3. THIS IS THE FIX: 
+        // rows is [{...}], so rows is the {...} object.
+        let user = rows;
 
-        // 4. LOG CHECK - If this says ['0'], we have a nested array issue
-        console.log("Keys found:", Object.keys(user));
-
-        // 5. Check password - using lowercase 'password' as you confirmed
-        if (!user.password) {
-            // If it still shows ['0'], this safety line will catch it:
-            const backupUser = Array.isArray(user) ? user : user;
-            
-            if (!backupUser.password || !bcrypt.compareSync(password, backupUser.password)) {
-                return res.status(401).send('Invalid password or column missing');
-            }
-            
-            // If backup worked, use that for the token
-            const token = jwt.sign({ id: backupUser.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
-            return res.status(200).send({ auth: true, token });
+        // 4. EXTRA SAFETY: If Aiven returns a nested array [[{...}]], unwrap it again
+        if (Array.isArray(user)) {
+            user = user;
         }
 
-        // 6. Normal Flow
-        if (!bcrypt.compareSync(password, user.password)) {
+        // 5. This log MUST now show: [ 'id', 'email', 'password' ]
+        console.log("Actual Columns in User Object:", Object.keys(user));
+
+        // 6. Check the password field
+        if (!user.password) {
+            return res.status(500).send('Database Error: password column not found in result');
+        }
+
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) {
             return res.status(401).send('Invalid password');
         }
 
+        // 7. Success
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
-        res.status(200).send({ auth: true, token });
+        res.status(200).send({ auth: true, token: token });
 
     } catch (err) {
         console.error("Login Error:", err);
