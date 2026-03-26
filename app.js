@@ -65,7 +65,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
 
-    connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+    pool.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
         if (err || results.length === 0) return res.status(401).send('User not found');
 
         const user = results[0];
