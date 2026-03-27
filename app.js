@@ -1125,13 +1125,7 @@ app.get('/api/getYearlyProductsSale', authenticateToken, async (req, res) => {
         res.status(500).send("Error generating yearly sale report");
     }
 });
-const { date } = req.query;
-        // Show orders that are NOT ready yet, oldest first
-        const [results] = await pool.query(
-            "SELECT id, itemName, cName, qty FROM orders WHERE date = ? AND status='P' ORDER BY status",
-            [date]
-        );
-        res.json(results);
+
 // ***** GET Table Bill ******
 app.get('/api/getBillForTable', authenticateToken, async (req, res) => {
     try {
