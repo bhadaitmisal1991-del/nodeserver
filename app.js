@@ -1125,19 +1125,24 @@ app.get('/api/getYearlyProductsSale', authenticateToken, async (req, res) => {
         res.status(500).send("Error generating yearly sale report");
     }
 });
-
+const { date } = req.query;
+        // Show orders that are NOT ready yet, oldest first
+        const [results] = await pool.query(
+            "SELECT id, itemName, cName, qty FROM orders WHERE date = ? AND status='P' ORDER BY status",
+            [date]
+        );
+        res.json(results);
 // ***** GET Table Bill ******
 app.get('/api/getBillForTable', authenticateToken, async (req, res) => {
     try {
-        const { tableno } = req.query;
-		console.log(req.query.tableNo+" ");
+        const { tableNo } = req.query;
         // Fetches items for a table that haven't been 'cleared' or paid yet
         const [results] = await pool.query(
             "SELECT * FROM bills WHERE tableno = ? AND billstatus = 'unpaid'",
-            [req.query.tableNo]
+            [tableNo]
         );
 		console.log(JSON.stringify(results));
-        res.json(results[0]);
+        res.json(results);
     } catch (err) {
         console.error(err);
         res.status(500).send("Error fetching table bill");
