@@ -1132,7 +1132,7 @@ app.get('/api/getBillForTable', authenticateToken, async (req, res) => {
         const { tableno, date } = req.query;
         // Fetches items for a table that haven't been 'cleared' or paid yet
         const [results] = await pool.query(
-            "SELECT * FROM bills WHERE tableno = ? AND date = ? ORDER BY id ASC",
+            "SELECT * FROM bills WHERE tableno = ? AND date = ?",
             [tableno, date]
         );
         res.json(results);
@@ -1206,12 +1206,7 @@ app.get('/api/getAllUnpaidOrders', authenticateToken, async (req, res) => {
 
         // Fetches all orders for the day where payment is pending
         // Adjust 'status' or 'isPaid' column name based on your actual schema
-        const query = `
-            SELECT * FROM bills 
-            WHERE date = ? 
-            AND (waitername = 'self-dinein' OR waitername = 'self-parcel')
-            ORDER BY id DESC
-        `;
+        const query = `SELECT tableno, foodstatus FROM bills where billstatus='unpaid' ORDER BY billno`;
 
         const [results] = await pool.query(query, [date]);
         res.json(results);
@@ -1285,7 +1280,7 @@ app.get('/api/getAllPendingOrders', authenticateToken, async (req, res) => {
         const { date } = req.query;
         // Show orders that are NOT ready yet, oldest first
         const [results] = await pool.query(
-            "SELECT * FROM pendingorders WHERE date = ? AND isReady = 0 ORDER BY id ASC",
+            "SELECT * FROM pendingorders WHERE date = ? AND status='P' ORDER BY status",
             [date]
         );
         res.json(results);
