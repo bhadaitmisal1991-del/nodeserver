@@ -1206,7 +1206,7 @@ app.get('/api/getAllUnpaidOrders', authenticateToken, async (req, res) => {
 
         // Fetches all orders for the day where payment is pending
         // Adjust 'status' or 'isPaid' column name based on your actual schema
-        const query = `SELECT tableno, foodstatus FROM bills where billstatus='unpaid' ORDER BY billno`;
+        const query = "SELECT tableno, foodstatus FROM bills where billstatus='unpaid' ORDER BY billno";
 
         const [results] = await pool.query(query, [date]);
         res.json(results);
