@@ -1249,9 +1249,9 @@ app.post('/api/removeBillItem', authenticateToken, async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const { id } = req.body; // Unique ID of the row in bills table
+        const { bill_id } = req.body; // Unique ID of the row in bills table
 
-        const [result] = await connection.query("DELETE FROM bills WHERE id = ?", [id]);
+        const [result] = await connection.query("DELETE FROM bills WHERE bill_id = ?", [bill_id]);
 
         await connection.commit();
         res.json({ status: 'success', message: 'Item removed' });
