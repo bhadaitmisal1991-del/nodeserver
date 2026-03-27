@@ -1280,7 +1280,7 @@ app.get('/api/getAllPendingOrders', authenticateToken, async (req, res) => {
         const { date } = req.query;
         // Show orders that are NOT ready yet, oldest first
         const [results] = await pool.query(
-            "SELECT * FROM pendingorders WHERE date = ? AND status='P' ORDER BY status",
+            "SELECT id, itemName, cName, qty FROM orders WHERE date = ? AND status='P' ORDER BY status",
             [date]
         );
         res.json(results);
