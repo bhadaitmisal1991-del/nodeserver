@@ -1130,7 +1130,7 @@ app.get('/api/getYearlyProductsSale', authenticateToken, async (req, res) => {
 app.get('/api/getBillForTable', authenticateToken, async (req, res) => {
     try {
         const { tableno } = req.query;
-		console.log(req.query);
+		console.log(req.query+" "+[tableno]);
         // Fetches items for a table that haven't been 'cleared' or paid yet
         const [results] = await pool.query(
             "SELECT * FROM bills WHERE tableno = ? AND billstatus = 'unpaid'",
