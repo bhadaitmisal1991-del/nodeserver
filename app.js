@@ -1222,14 +1222,14 @@ app.post('/api/paidTableBill', authenticateToken, async (req, res) => {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
-
-        const { tableno, date, waitername } = req.body;
+		var billStatus  = 'paid';
+        const { billno } = req.body;
 
         // Move items to a history/archive if needed, or update status
         // Here we update waitername to 'paid' or a similar identifier
         const [result] = await connection.query(
-            "UPDATE bills SET waitername = ? WHERE tableno = ? AND date = ?",
-            [`paid-${waitername}`, tableno, date]
+            "UPDATE bills SET billstatus = ? WHERE billno = ?",
+            [ billStatus, billno]
         );
 
         await connection.commit();
