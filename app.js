@@ -37,10 +37,11 @@ const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     // FIX: split(' ') returns ["Bearer", "TOKEN"]. We need index.
     const token = authHeader && authHeader.split(' '); 
-    console.log("token-"+JSON.stringify(token));
+    //console.log("token-"+JSON.stringify(token));
     if (!token) return res.sendStatus(401);
-
-    jwt.verify(token[0]+" "+token[1], process.env.JWT_SECRET, (err, user) => {
+	
+	let tempToken = token[0]+" "+token[1];
+    jwt.verify(tempToken, process.env.JWT_SECRET, (err, user) => {
         if (err) {
             console.error("JWT Verification Error:", err.message);
             return res.sendStatus(403);
