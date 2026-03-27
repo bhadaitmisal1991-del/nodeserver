@@ -1135,7 +1135,8 @@ app.get('/api/getBillForTable', authenticateToken, async (req, res) => {
             "SELECT * FROM bills WHERE tableno = ? AND billstatus = 'unpaid'",
             [tableno]
         );
-        res.json(results);
+		console.log(JSON.stringify(results));
+        res.json(results[0]);
     } catch (err) {
         console.error(err);
         res.status(500).send("Error fetching table bill");
