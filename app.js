@@ -40,7 +40,7 @@ const authenticateToken = (req, res, next) => {
     console.log("token-"+JSON.stringify(token));
     if (!token) return res.sendStatus(401);
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    jwt.verify(token[0]+" "+token[1], process.env.JWT_SECRET, (err, user) => {
         if (err) {
             console.error("JWT Verification Error:", err.message);
             return res.sendStatus(403);
