@@ -1278,7 +1278,7 @@ app.post('/api/addPendingOrders', authenticateToken, async (req, res) => {
 	
         // req.body is an array or object containing order details
         const [result] = await pool.query("INSERT INTO orders (itemName, qty, cName, status, date) VALUES (?, ?, ?, ?, ?)", 
-    [inserts.itemName, inserts.qty, inserts.cName, inserts.status, inserts.date]);
+    [inserts[0][0], inserts.qty, inserts.cName, inserts.status, inserts.date]);
 		
         res.json({ status: 'success', insertId: result.insertId });
     } catch (err) {
