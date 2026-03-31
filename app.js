@@ -1267,8 +1267,18 @@ app.post('/api/removeBillItem', authenticateToken, async (req, res) => {
 // ***** Add pending Orders - Bhaji Vadi Coffee******	
 app.post('/api/addPendingOrders', authenticateToken, async (req, res) => {
     try {
+	
+	var inserts = [];
+	if(Number(req.body.qty_bhaji)>0)
+		inserts.push(['B', Number(req.body.qty_bhaji), req.body.cName, req.body.status, req.body.date]);
+	if(Number(req.body.qty_vadi)>0)
+		inserts.push(['V', Number(req.body.qty_vadi), req.body.cName, req.body.status, req.body.date]);
+	if(Number(req.body.qty_coffee)>0)
+		inserts.push(['C', Number(req.body.qty_coffee), req.body.cName, req.body.status, req.body.date]);
+	
         // req.body is an array or object containing order details
-        const [result] = await pool.query("INSERT INTO pendingorders SET ?", [req.body]);
+        const [result] = await pool.query("INSERT INTO orders(itemName, qty, cName, status, date) SET ?", [inserts]);
+		
         res.json({ status: 'success', insertId: result.insertId });
     } catch (err) {
         res.status(500).send("Error adding pending order");
