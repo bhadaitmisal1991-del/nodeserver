@@ -1282,6 +1282,7 @@ app.post('/api/addPendingOrders', authenticateToken, async (req, res) => {
 		
         res.json({ status: 'success', insertId: result.insertId });
     } catch (err) {
+		console.log(err);
         res.status(500).send("Error adding pending order");
     }
 });
