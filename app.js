@@ -790,14 +790,10 @@ app.post('/api/updateSaleCalculation', authenticateToken, async (req, res) => {
 
         const query = `
             UPDATE salecalculation 
-            SET n2000=?, n500=?, n200=?, n100=?, n50=?, n20=?, n10=?, n5=?, n2=?, n1=?, 
-                totalAmount=?, date=? 
-            WHERE id=?
+            SET c2000=?, c500=?, c200=?, c100=?, c50=?, c20=?, c10=?, cash = ?, paytm = ?, bhim = ?, sChange = ?, shopSale = ?, laptopSale = ?, swiggy = ?, zomato = ?, expences = ?   WHERE sDate = ?
         `;
-
         const [result] = await connection.query(query, [
-            n2000, n500, n200, n100, n50, n20, n10, n5, n2, n1, 
-            totalAmount, date, id
+            req.body.c2000, req.body.c500, req.body.c200, req.body.c100, req.body.c50, req.body.c20, req.body.c10, req.body.cash, req.body.paytm, req.body.bhim, req.body.sChange, req.body.shopSale, req.body.laptopSale, req.body.swiggy, req.body.zomato, req.body.expences, req.body.sDate
         ]);
 
         await connection.commit();
