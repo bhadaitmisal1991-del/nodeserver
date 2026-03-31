@@ -810,17 +810,13 @@ app.post('/api/updateSaleCalculation', authenticateToken, async (req, res) => {
 // ***** Sale calculation report ******
 app.get('/api/getCalcReport', authenticateToken, async (req, res) => { 
     try {
-        const { FromDate, ToDate } = req.query;
-        // Default to FromDate if ToDate is not provided
-        const finalToDate = (ToDate && ToDate !== "undefined") ? ToDate : FromDate;
-
         const query = `
             SELECT * FROM salecalculation 
-            WHERE date >= ? AND date <= ? 
-            ORDER BY date ASC
+            WHERE sDate >= ? AND sDate <= ? 
+            ORDER BY sDate DESC
         `;
 
-        const [results] = await pool.query(query, [FromDate, finalToDate]);
+        const [results] = await pool.query(query, [req.query.startDate, req.query.endDate]);
         res.json(results);
     } catch (err) {
         console.error(err);
