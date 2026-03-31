@@ -1146,10 +1146,10 @@ app.get('/api/getBillForTable', authenticateToken, async (req, res) => {
 // ***** GET all Kitchen Orders table 500 ie customer parcel******
 app.get('/api/getOrdersByDate', authenticateToken, async (req, res) => {
     try {
-        const { date } = req.query;
+        const { date, waiterName } = req.query;
         const [results] = await pool.query(
-            "SELECT * FROM bills WHERE date = ? ORDER BY id DESC",
-            [date]
+            "SELECT * FROM bills WHERE date = ? and waitername = ? and foodstatus != '' ORDER BY bill_id",
+            [date, waiterName]
         );
         res.json(results);
     } catch (err) {
