@@ -767,8 +767,8 @@ app.post('/api/addSalecalculation', authenticateToken, async (req, res) => {
 app.get('/api/saleCalDate', authenticateToken, async (req, res) => {  
     try {
         const [result] = await pool.query(
-            "SELECT * FROM salecalculation WHERE date = ? ORDER BY id DESC",
-            [req.query.date]
+            "SELECT * FROM salecalculation WHERE sDate = ?",
+            [req.query.cDate]
         );
         res.json(result);
     } catch (err) {
