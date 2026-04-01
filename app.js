@@ -884,8 +884,7 @@ app.post('/api/updatePavEntry', authenticateToken, async (req, res) => {
 app.get('/api/pavEntryBalance', authenticateToken, async (req, res) => { 
     try {
         const [result] = await pool.query(
-            "SELECT * FROM paventry WHERE pID = ? ORDER BY id DESC LIMIT 1",
-            [req.query.pID]
+            "select * from paventry ORDER BY pno DESC LIMIT 1"
         );
         res.json(result);
     } catch (err) {
