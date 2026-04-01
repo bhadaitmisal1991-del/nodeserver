@@ -897,8 +897,7 @@ app.get('/api/pavEntryBalance', authenticateToken, async (req, res) => {
 app.get('/api/getLastNilBalRecord', authenticateToken, async (req, res) => { 
     try {
         const [result] = await pool.query(
-            "SELECT * FROM paventry WHERE pID = ? AND balance = 0 ORDER BY id DESC LIMIT 1",
-            [req.query.pID]
+            "select * from paventry where balance = 0 ORDER BY pno DESC LIMIT 1"
         );
         res.json(result);
     } catch (err) {
