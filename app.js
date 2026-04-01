@@ -910,8 +910,8 @@ app.get('/api/getLastNilBalRecord', authenticateToken, async (req, res) => {
 app.get('/api/getDueRecords', authenticateToken, async (req, res) => { 
     try {
         const [result] = await pool.query(
-            "SELECT * FROM paventry WHERE id >= ? AND pID = ? ORDER BY id DESC",
-            [req.query.id, req.query.pID]
+            "SELECT * FROM paventry WHERE pno >= ? ORDER BY pno DESC",
+            [req.query.pno]
         );
         res.json(result);
     } catch (err) {
@@ -923,7 +923,7 @@ app.get('/api/getDueRecords', authenticateToken, async (req, res) => {
 	// ***** GET Pav DATA ******
 app.get('/api/getPavData', authenticateToken, async (req, res) => {
     try {
-        const [result] = await pool.query('SELECT * FROM paventry');
+        const [result] = await pool.query("select * from paventry where tranDate >= '"+startDate+"' and tranDate <= '"+endDate+"' ORDER BY pno DESC");
         res.json(result);
     } catch (err) {
         console.error(err);
@@ -934,22 +934,14 @@ app.get('/api/getPavData', authenticateToken, async (req, res) => {
 	// ***** GET Custome Bill Search  ******
 app.get('/api/getCustBill', authenticateToken, async (req, res) => {  
     try {
-        const { cID, date } = req.query;
+        var billDate = req.query.billDate; 
+	 var cname = req.query.cname;
 
-        // If a date is provided, filter by both Customer ID and Date. 
-        // Otherwise, fetch all bills for that customer.
-        let query;
-        let params;
+       
+            query = "select * from bills where date = '"+billDate+"' and cname LIKE '%"+cname+"%' ORDER BY billno DESC";
+       
 
-        if (date && date !== "undefined") {
-            query = "SELECT * FROM farsancusttransaction WHERE cID = ? AND tranDate = ? ORDER BY id DESC";
-            params = [cID, date];
-        } else {
-            query = "SELECT * FROM farsancusttransaction WHERE cID = ? ORDER BY id DESC";
-            params = [cID];
-        }
-
-        const [results] = await pool.query(query, params);
+        const [results] = await pool.query(query);
         res.json(results);
     } catch (err) {
         console.error("Get Customer Bill Error:", err);
