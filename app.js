@@ -923,7 +923,9 @@ app.get('/api/getDueRecords', authenticateToken, async (req, res) => {
 	// ***** GET Pav DATA ******
 app.get('/api/getPavData', authenticateToken, async (req, res) => {
     try {
-        const [result] = await pool.query("select * from paventry where tranDate >= '"+req.query.startDate+"' and tranDate <= '"+req.query.endDate+"' ORDER BY pno DESC");
+		var startDate = req.query.startDate; 
+		var endDate = req.query.endDate;
+        const [result] = await pool.query("select * from paventry where tranDate >= '"+startDate+"' and tranDate <= '"+endDate+"' ORDER BY pno DESC");
         res.json(result);
     } catch (err) {
         console.error(err);
