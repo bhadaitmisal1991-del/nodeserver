@@ -120,7 +120,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		const [rows1] = await conn.query(
 				"SELECT billno FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
 		);
-		
+		console.log("rows ---- "+JSON.stringify(rows1));
 		if(rows1[0].billno!="")		
 			billNo = rows1[0].billno + 1;
 		
