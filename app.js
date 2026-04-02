@@ -147,7 +147,7 @@ app.post('/api/addNewBill', async (req, res) => {
 			console.log("newToken Token No---- "+newToken);
 		}
 		console.log("Bill No--"+billNo);
-		const billData = { ...req.body, tableno: tableNo ,tokenNo: newToken, billno: billNo};
+		const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
 		
         await conn.query("INSERT INTO bills SET ?", [billData]);
         await conn.commit();
