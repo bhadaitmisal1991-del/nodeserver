@@ -114,13 +114,15 @@ app.post('/api/addNewBill', async (req, res) => {
 		var tmpdate = req.query.date;
 		var newToken = 0;
 		var tableNo = 500;
+		var billNo = 1;
 		// 1. Get the last token for TODAY and LOCK the row (FOR UPDATE)
 		
 		const [rows1] = await conn.query(
-				"SELECT billno, tokenNo FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
+				"SELECT billno FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
 		);
-				
 		
+		if(rows1[0].billno!=""){		
+			billNo = rows1[0].billno + 1;
 		
 		if(req.query.isToken=="true"){
 			tableNo = 0;
@@ -142,10 +144,10 @@ app.post('/api/addNewBill', async (req, res) => {
 			} else {
 				newToken = lastToken + 1;
 			}
-			console.log(" newToken Token No---- "+newToken);
+			console.log("newToken Token No---- "+newToken);
 		}
-		
-		const billData = { ...req.body, tableno: tableNo ,tokenNo: newToken };
+		console.log("Bill No--"+billNo);
+		const billData = { ...req.body, tableno: tableNo ,tokenNo: newToken, billno: billNo};
 		
         await conn.query("INSERT INTO bills SET ?", [billData]);
         await conn.commit();
