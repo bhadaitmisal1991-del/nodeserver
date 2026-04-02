@@ -118,7 +118,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		
 		const [rows1] = await conn.query(
 				"SELECT billno, tokenNo FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
-
+		);
 				
 		
 		
