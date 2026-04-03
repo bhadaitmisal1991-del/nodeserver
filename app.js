@@ -151,7 +151,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		
         await conn.query("INSERT INTO bills SET ?", [billData]);
         await conn.commit();
-		res.json({ response: 'success', tokenNo: newToken });
+		res.json({ response: 'success', tokenNo: newToken, billNo: billNo });
 	
 	} catch (err) {
         // If anything fails, undo changes so the token isn't "lost"
@@ -1295,10 +1295,9 @@ app.get('/api/getAllPendingOrders', authenticateToken, async (req, res) => {
 // ***** Mark Pending Order Ready - Bhaji Vadi Coffee ******
 app.post('/api/markPendingOrderReady', authenticateToken, async (req, res) => {
     try {
-        const { id } = req.body;
+        var status  = 'R';	 
         const [result] = await pool.query(
-            "UPDATE pendingorders SET isReady = 1 WHERE id = ?",
-            [id]
+            'UPDATE orders SET status = ? WHERE id = ?', [status, req.body.id]
         );
         res.json({ status: 'success' });
     } catch (err) {
