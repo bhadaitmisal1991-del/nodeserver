@@ -1308,10 +1308,17 @@ app.post('/api/markPendingOrderReady', authenticateToken, async (req, res) => {
 // ***** UPDATE Pending Orders DATA - Bhaji Vadi Coffee******
 app.post('/api/updatePendingOrders', authenticateToken, async (req, res) => {
     try {
-        const { qty, id } = req.body;
+        var tmpQty = 0;
+	  if(req.body.qty_bhaji!=undefined){
+		tmpQty = req.body.qty_bhaji;
+	  }else if(req.body.qty_vadi!=undefined){
+		tmpQty = req.body.qty_vadi;
+	  }else{
+		tmpQty = req.body.qty_coffee;
+	  }
+	  
         const [result] = await pool.query(
-            "UPDATE pendingorders SET qty = ? WHERE id = ?",
-            [qty, id]
+            "UPDATE orders SET cName = ?, qty = ? WHERE id = ?", [req.body.cName, tmpQty, req.body.id]
         );
         res.json({ status: 'success' });
     } catch (err) {
