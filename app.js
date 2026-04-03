@@ -127,7 +127,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		if(req.query.isToken=="true"){
 			tableNo = 0;
 			const [rows] = await conn.query(
-				"SELECT billno, tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE",
+				"SELECT tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE",
 				[req.body.date]
 			);
 			console.log("rows ---- "+JSON.stringify(rows));
@@ -178,7 +178,7 @@ app.post('/api/addNewBill', async (req, res) => {
             (itemno, qty, foodstatus, waitername, preparedBy, tableno, tokenNo, date, time, cname, note, billstatus, billno) 
             VALUES ?`;
 
-        const [result] = await pool.query(sql, [values]);
+        const [result] = await conn.query(sql, [values]);
 		
         //await conn.query("INSERT INTO bills SET ?", [billData]);
         await conn.commit();
