@@ -149,7 +149,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		console.log("Bill No--"+billNo);
 		//const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
 		console.log("-- req.body 1-- "+JSON.stringify(req.body));
-		this.billData = req.body.map(item => {
+		var billData = req.body.map(item => {
 		  return {
 			...item,
 			tableno: tableNo, 
