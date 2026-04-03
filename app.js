@@ -124,7 +124,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		if(rows1[0].billno!="")		
 			billNo = rows1[0].billno + 1;
 		
-		if(req.query.isToken=="true" req.body.waitername!='self-parcel'){
+		if(req.query.isToken=="true" && req.body.waitername!='self-parcel'){
 			tableNo = 0;
 			const [rows] = await conn.query(
 				"SELECT tokenNo FROM bills WHERE date = '"+tmpdate+"' AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE"
