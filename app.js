@@ -148,7 +148,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		}
 		console.log("Bill No--"+billNo);
 		//const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
-		console.log("-- req.body 1-- "+JSON.stringify(req.body));
+		//console.log("-- req.body 1-- "+JSON.stringify(req.body));
 		var billData = req.body.map(item => {
 		  return {
 			...item,
@@ -157,7 +157,7 @@ app.post('/api/addNewBill', async (req, res) => {
 			billno: billNo
 		  };
 		});
-		console.log("-- req.body 2-- "+JSON.stringify(req.body));
+		console.log("-- req.body 2-- "+JSON.stringify(billData));
 		
         await conn.query("INSERT INTO bills SET ?", billData);
         await conn.commit();
