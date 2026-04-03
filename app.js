@@ -159,7 +159,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		});
 		console.log("-- req.body 2-- "+JSON.stringify(req.body));
 		
-        await conn.query("INSERT INTO bills SET ?", [billData]);
+        await conn.query("INSERT INTO bills SET ?", billData);
         await conn.commit();
 		res.json({ response: 'success', tokenNo: newToken, billNo: billNo });
 	
