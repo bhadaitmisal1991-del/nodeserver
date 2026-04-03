@@ -161,7 +161,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		
         await conn.query("INSERT INTO bills SET ?", [billData]);
         await conn.commit();
-		res.json({ response: 'success', tokenNo: newToken, billNo: billNo });
+		res.json({ response: 'success', affectedRows: result.affectedRows, tokenNo: newToken, billNo: billNo });
 	
 	} catch (err) {
         // If anything fails, undo changes so the token isn't "lost"
