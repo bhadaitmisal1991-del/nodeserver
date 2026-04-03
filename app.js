@@ -172,10 +172,11 @@ app.post('/api/addNewBill', async (req, res) => {
             item.cname,
             item.note,
             item.billstatus,
-            item.billno
+            item.billno,
+			item.peopleNo
         ]);
 		const sql = `INSERT INTO bills 
-            (itemno, qty, foodstatus, waitername, preparedBy, tableno, tokenNo, date, time, cname, note, billstatus, billno) 
+            (itemno, qty, foodstatus, waitername, preparedBy, tableno, tokenNo, date, time, cname, note, billstatus, billno, peopleNo) 
             VALUES ?`;
 
         const [result] = await conn.query(sql, [values]);
