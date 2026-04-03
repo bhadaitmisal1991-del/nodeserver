@@ -1197,16 +1197,16 @@ app.get('/api/getAllKitchenOrders', authenticateToken, async (req, res) => {
 
 // ***** Mark Order Ready From Kitchen ******
 app.post('/api/markOrderReady', authenticateToken, async (req, res) => {
+
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
         // Expects bill_id or unique ID to mark a specific item/order as prepared
-        const { id, isReady } = req.body;
+        var foodready  = 'ready',  foodpreparing = 'preparing';
 
         const [result] = await connection.query(
-            "UPDATE bills SET isReady = ? WHERE id = ?",
-            [isReady, id]
+            'UPDATE bills SET foodstatus = ? WHERE billno = ? AND foodstatus = ?', [foodready, req.body.billno, foodpreparing]
         );
 
         await connection.commit();
