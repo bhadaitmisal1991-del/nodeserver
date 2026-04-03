@@ -159,7 +159,28 @@ app.post('/api/addNewBill', async (req, res) => {
 		});
 		console.log("-- req.body 2-- "+JSON.stringify(billData));
 		
-        await conn.query("INSERT INTO bills SET ?", [billData]);
+		const values = billData.map(item => [
+            item.itemno,
+            item.qty,
+            item.foodstatus,
+            item.waitername,
+            item.preparedBy,
+            item.tableno,
+            item.tokenNo,
+            item.date,
+            item.time,
+            item.cname,
+            item.note,
+            item.billstatus,
+            item.billno
+        ]);
+		const sql = `INSERT INTO bills 
+            (itemno, qty, foodstatus, waitername, preparedBy, tableno, tokenNo, date, time, cname, note, billstatus, billno) 
+            VALUES ?`;
+
+        const [result] = await pool.query(sql, [values]);
+		
+        //await conn.query("INSERT INTO bills SET ?", [billData]);
         await conn.commit();
 		res.json({ response: 'success', affectedRows: result.affectedRows, tokenNo: newToken, billNo: billNo });
 	
