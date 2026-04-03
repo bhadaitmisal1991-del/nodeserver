@@ -127,8 +127,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		if(req.query.isToken=="true"){
 			tableNo = 0;
 			const [rows] = await conn.query(
-				"SELECT tokenNo FROM bills WHERE date = ? AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE",
-				[req.body.date]
+				"SELECT tokenNo FROM bills WHERE date = '"+tmpdate+"' AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE"
 			);
 			console.log("rows ---- "+JSON.stringify(rows));
 			//console.log("Token No---- "+rows[0].tokenNo);
