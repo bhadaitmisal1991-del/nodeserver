@@ -120,7 +120,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		const [rows1] = await conn.query(
 				"SELECT billno FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
 		);
-		console.log("rows ---- "+JSON.stringify(rows1));
+		console.log("Bill No ---- "+JSON.stringify(rows1));
 		if(rows1[0].billno!="")		
 			billNo = rows1[0].billno + 1;
 		
@@ -131,7 +131,7 @@ app.post('/api/addNewBill', async (req, res) => {
 				[req.body.date]
 			);
 			console.log("rows ---- "+JSON.stringify(rows));
-			console.log("Token No---- "+rows[0].tokenNo);
+			//console.log("Token No---- "+rows[0].tokenNo);
 			let lastToken = (rows.length > 0) ? rows[0].tokenNo : 0;
 			console.log("lastToken---- "+lastToken);
 			if (lastToken === null || lastToken === undefined) {
@@ -144,9 +144,9 @@ app.post('/api/addNewBill', async (req, res) => {
 			} else {
 				newToken = lastToken + 1;
 			}
-			console.log("newToken Token No---- "+newToken);
+			console.log("Token No---- "+newToken);
 		}
-		console.log("Bill No--"+billNo);
+		//console.log("Bill No--"+billNo);
 		//const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
 		//console.log("-- req.body 1-- "+JSON.stringify(req.body));
 		var billData = req.body.map(item => {
@@ -157,7 +157,7 @@ app.post('/api/addNewBill', async (req, res) => {
 			billno: billNo
 		  };
 		});
-		console.log("-- req.body 2-- "+JSON.stringify(billData));
+		//console.log("-- req.body 2-- "+JSON.stringify(billData));
 		
 		const values = billData.map(item => [
             item.itemno,
