@@ -116,7 +116,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		var tableNo = 500;
 		var billNo = 1;
 		// 1. Get the last token for TODAY and LOCK the row (FOR UPDATE)
-		console.log("req.body ---- "+JSON.stringify(req.body));
+		//console.log("req.body ---- "+JSON.stringify(req.body));
 		const [rows1] = await conn.query(
 				"SELECT billno FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
 		);
