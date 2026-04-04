@@ -123,6 +123,8 @@ app.post('/api/addNewBill', async (req, res) => {
 		//console.log("Bill No ---- "+JSON.stringify(rows1));
 		if(rows1 && rows1[0].billno!="")		
 			billNo = rows1[0].billno + 1;
+		else 
+			billNo = 1;
 		
 		if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel'){
 			tableNo = 0;
