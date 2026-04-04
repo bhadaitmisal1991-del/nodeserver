@@ -121,10 +121,9 @@ app.post('/api/addNewBill', async (req, res) => {
 				"SELECT billno FROM bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
 		);
 		//console.log("Bill No ---- "+JSON.stringify(rows1));
-		if(rows1 && rows1[0].billno!="")		
+		if(rows1.length!=0)		
 			billNo = rows1[0].billno + 1;
-		else 
-			billNo = 1;
+		
 		
 		if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel'){
 			tableNo = 0;
