@@ -204,8 +204,8 @@ app.post('/api/addNewBill', async (req, res) => {
 //******Razor Pay Implementation******
 // --- 5. Razorpay & Mail Logic ---
 const razorpay = new Razorpay({
-    key_id: process.env.key_id_r,
-    key_secret: process.env.key_secret_r,
+    key_id: process.env.key_id,
+    key_secret: process.env.key_secret,
 });
 
 app.post('/api/createOrder', async (req, res) => {
