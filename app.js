@@ -1308,7 +1308,7 @@ app.post('/api/addPendingOrders', authenticateToken, async (req, res) => {
             order.status,
             order.date
         ]);
-		console.log(JSON.stringify(inserts));
+		//console.log(JSON.stringify(inserts));
 		const sql = "INSERT INTO orders (itemName, qty, cName, status, date) VALUES ?";
 		const [result] = await pool.query(sql, [inserts]);
 		res.json({ status: 'success', inserted: result.affectedRows });
