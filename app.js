@@ -166,7 +166,7 @@ app.post('/api/addNewBill', async (req, res) => {
             item.waitername,
             item.preparedBy,
             item.tableno,
-			item.mobileno
+			item.mobileno,
             item.tokenNo,
             item.date,
             item.time,
