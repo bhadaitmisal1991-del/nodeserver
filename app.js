@@ -1296,12 +1296,27 @@ app.post('/api/addPendingOrders', authenticateToken, async (req, res) => {
 		inserts.push(['V', Number(req.body.qty_vadi), req.body.cName, req.body.status, req.body.date]);
 	if(Number(req.body.qty_coffee)>0)
 		inserts.push(['C', Number(req.body.qty_coffee), req.body.cName, req.body.status, req.body.date]);
-	
-        // req.body is an array or object containing order details
-        const [result] = await pool.query("INSERT INTO orders (itemName, qty, cName, status, date) VALUES (?, ?, ?, ?, ?)", 
-    [inserts];
 		
-        res.json({ status: 'success', insertId: result.insertId });
+		//const orderData = req.body; // Assuming this is your array of order objects
+
+        // 1. Map the array of objects into a nested array of values
+        // IMPORTANT: The order here must match the column order in the SQL string
+        const values = inserts.map(order => [
+            order.itemName,
+            order.qty,
+            order.cName,
+            order.status,
+            order.date
+        ]);
+		
+		const sql = "INSERT INTO orders (itemName, qty, cName, status, date) VALUES ?";
+		const [result] = await pool.query(sql, [values]);
+		res.json({ status: 'success', inserted: result.affectedRows });
+        // req.body is an array or object containing order details
+      /*  const [result] = await pool.query("INSERT INTO orders (itemName, qty, cName, status, date) VALUES (?, ?, ?, ?, ?)", 
+    [inserts]);
+		
+        res.json({ status: 'success', insertId: result.insertId });*/
     } catch (err) {
 		console.log(err);
         res.status(500).send("Error adding pending order");
