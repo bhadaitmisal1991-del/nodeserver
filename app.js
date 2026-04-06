@@ -1404,7 +1404,19 @@ app.post('/api/clearPendingOrder', authenticateToken, async (req, res) => {
 app.get('/api/restaurantInfo', async (req, res) => {  
     try {
         const [result] = await pool.query("SELECT dinein_online, parcel_online FROM restaurantInfo LIMIT 1");
-        res.json(result);
+		
+		if (result.length > 0) {
+            // Convert 1/0 back to true/false for the frontend
+            const settings = {
+                dinein_online: !!result.dinein_online,
+                parcel_online: !!result.parcel_online
+            };
+            res.json(settings);
+        } else {
+            res.status(404).send("Settings not found");
+        }
+		
+       // res.json(result);
     } catch (err) {
         console.error(err);
         res.status(500).send("Error fetching restaurant info");
