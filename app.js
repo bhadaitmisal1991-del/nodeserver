@@ -158,7 +158,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		  };
 		});
 		//console.log("-- req.body 2-- "+JSON.stringify(billData));
-		
+		 
 		const values = billData.map(item => [
             item.itemno,
             item.qty,
