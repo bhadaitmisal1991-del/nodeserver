@@ -1414,12 +1414,12 @@ app.get('/api/restaurantInfo', async (req, res) => {
 // ***** UPDATE restaurant info ******
 app.post('/api/updateResturantInfo', authenticateToken, async (req, res) => {      
     try {
-        const { dineinOnline, parcelOnline } = req.body;
+      //  const { dineinOnline, parcelOnline } = req.body;
         
         // We assume the settings are stored in row with ID 1
         const [result] = await pool.query(
             'UPDATE restaurantInfo SET dinein_online = ?, parcel_online = ? WHERE id = 1', 
-            [dineinOnline, parcelOnline]
+            [req.body.dineinOnline, req.body.parcelOnline]
         );
         res.json(result);
     } catch (err) {
