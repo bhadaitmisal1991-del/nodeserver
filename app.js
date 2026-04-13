@@ -127,7 +127,7 @@ app.post('/api/addNewBill', async (req, res) => {
 		//console.log("isToken-- "+req.query.isToken);
 		//console.log("resetToken-- "+req.query.resetToken);
 		//console.log("waitername-- "+req.body[0].waitername);
-		if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel' && req.query.resetToken=="false"){
+		if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel'){
 			tableNo = 0;
 			const [rows] = await conn.query(
 				"SELECT tokenNo FROM bills WHERE date = '"+tmpdate+"' AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE"
@@ -140,16 +140,19 @@ app.post('/api/addNewBill', async (req, res) => {
 				lastToken = 0;
 			}			
 
-			// 2. Reset logic: If reaches 100, reset to 1, else +1
-			if (lastToken >= 100) {
-				newToken = 1;
-			} else {
-				newToken = lastToken + 1;
-			}
-			//console.log("Token No---- "+newToken);
-		}else{
+			
+			
 			if(req.query.resetToken=="true")
 				newToken = 1;
+			else{
+				// 2. Reset logic: If reaches 100, reset to 1, else +1
+				if (lastToken >= 100) {
+					newToken = 1;
+				} else {
+					newToken = lastToken + 1;
+				}
+			}
+			//console.log("Token No---- "+newToken);
 		}
 		//console.log("Bill No--"+billNo);
 		//const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
