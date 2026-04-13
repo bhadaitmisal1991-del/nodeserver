@@ -147,6 +147,9 @@ app.post('/api/addNewBill', async (req, res) => {
 				newToken = lastToken + 1;
 			}
 			//console.log("Token No---- "+newToken);
+		}else{
+			if(req.query.resetToken=="true")
+				newToken = 1;
 		}
 		//console.log("Bill No--"+billNo);
 		//const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
