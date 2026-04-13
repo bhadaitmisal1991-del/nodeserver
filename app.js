@@ -124,9 +124,9 @@ app.post('/api/addNewBill', async (req, res) => {
 		if(rows1.length!=0)		
 			billNo = rows1[0].billno + 1;
 		
-		console.log("isToken-- "+req.query.isToken);
-		console.log("resetToken-- "+req.query.resetToken);
-		console.log("waitername-- "+req.body[0].waitername);
+		//console.log("isToken-- "+req.query.isToken);
+		//console.log("resetToken-- "+req.query.resetToken);
+		//console.log("waitername-- "+req.body[0].waitername);
 		if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel' && req.query.resetToken=="false"){
 			tableNo = 0;
 			const [rows] = await conn.query(
