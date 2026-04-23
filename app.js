@@ -208,6 +208,109 @@ app.post('/api/addNewBill', async (req, res) => {
 
 
 
+// Add new bills products
+app.post('/api/addNewBillProducts', async (req, res) => {
+	//const { date, isToken } = req.query;
+	const conn = await pool.getConnection();
+	try {
+		await conn.beginTransaction();
+		var tmpdate = req.query.date;
+		var newToken = 0;
+		var tableNo = 500;
+		var billNo = 1;
+		// 1. Get the last token for TODAY and LOCK the row (FOR UPDATE)
+		//console.log("req.body ---- "+JSON.stringify(req.body));
+		const [rows1] = await conn.query(
+				"SELECT billno FROM products_bills where date='"+tmpdate+"' ORDER BY billno DESC LIMIT 1"
+		);
+		//console.log("Bill No ---- "+JSON.stringify(rows1));
+		if(rows1.length!=0)		
+			billNo = rows1[0].billno + 1;
+		
+		//console.log("isToken-- "+req.query.isToken);
+		//console.log("resetToken-- "+req.query.resetToken);
+		//console.log("waitername-- "+req.body[0].waitername);
+		if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel'){
+			tableNo = 0;
+			const [rows] = await conn.query(
+				"SELECT tokenNo FROM products_bills WHERE date = '"+tmpdate+"' AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE"
+			);
+			//console.log("rows ---- "+JSON.stringify(rows));
+			//console.log("Token No---- "+rows[0].tokenNo);
+			let lastToken = (rows.length > 0) ? rows[0].tokenNo : 0;
+			//console.log("lastToken---- "+lastToken);
+			if (lastToken === null || lastToken === undefined) {
+				lastToken = 0;
+			}			
+
+			
+			
+			if(req.query.resetToken=="true")
+				newToken = 1;
+			else{
+				// 2. Reset logic: If reaches 100, reset to 1, else +1
+				if (lastToken >= 100) {
+					newToken = 1;
+				} else {
+					newToken = lastToken + 1;
+				}
+			}
+			//console.log("Token No---- "+newToken);
+		}
+		//console.log("Bill No--"+billNo);
+		//const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
+		//console.log("-- req.body 1-- "+JSON.stringify(req.body));
+		var billData = req.body.map(item => {
+		  return {
+			...item,
+			tableno: tableNo, 
+			tokenNo: newToken, 
+			billno: billNo
+		  };
+		});
+		//console.log("-- req.body 2-- "+JSON.stringify(billData));
+		 
+		const values = billData.map(item => [
+            item.itemno,
+            item.qty,
+            item.foodstatus,
+            item.waitername,
+            item.preparedBy,
+            item.tableno,
+			item.mobileno,
+            item.tokenNo,
+            item.date,
+            item.time,
+            item.cname,
+            item.note,
+            item.billstatus,
+            item.billno,
+			item.peopleNo
+        ]);
+		const sql = `INSERT INTO products_bills 
+            (itemno, qty, foodstatus, waitername, preparedBy, tableno, mobileno, tokenNo, date, time, cname, note, billstatus, billno, peopleNo) 
+            VALUES ?`;
+
+        const [result] = await conn.query(sql, [values]);
+		
+        //await conn.query("INSERT INTO bills SET ?", [billData]);
+        await conn.commit();
+		res.json({ response: 'success', affectedRows: result.affectedRows, tokenNo: newToken, billNo: billNo });
+	
+	} catch (err) {
+        // If anything fails, undo changes so the token isn't "lost"
+        await conn.rollback();
+        console.error("Token Generation Error:", err);
+        res.status(500).json({ error: "Failed to generate token", details: err.message });
+    } finally {
+        // Release the connection back to the pool
+        conn.release();
+    }
+     
+});
+
+
+
 
 
 //******Razor Pay Implementation******
