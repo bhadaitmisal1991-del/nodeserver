@@ -230,7 +230,7 @@ app.post('/api/addNewBillProducts', async (req, res) => {
 		//console.log("isToken-- "+req.query.isToken);
 		//console.log("resetToken-- "+req.query.resetToken);
 		//console.log("waitername-- "+req.body[0].waitername);
-		if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel'){
+		/*if(req.query.isToken=="true" && req.body[0].waitername!='self-parcel'){
 			tableNo = 0;
 			const [rows] = await conn.query(
 				"SELECT tokenNo FROM products_bills WHERE date = '"+tmpdate+"' AND tableno = 0 ORDER BY billno DESC LIMIT 1 FOR UPDATE"
@@ -256,7 +256,7 @@ app.post('/api/addNewBillProducts', async (req, res) => {
 				}
 			}
 			//console.log("Token No---- "+newToken);
-		}
+		}*/
 		//console.log("Bill No--"+billNo);
 		//const billData = { ...req.body, tableno: tableNo, tokenNo: newToken, billno: billNo};
 		//console.log("-- req.body 1-- "+JSON.stringify(req.body));
@@ -264,7 +264,6 @@ app.post('/api/addNewBillProducts', async (req, res) => {
 		  return {
 			...item,
 			tableno: tableNo, 
-			tokenNo: newToken, 
 			billno: billNo
 		  };
 		});
@@ -278,24 +277,23 @@ app.post('/api/addNewBillProducts', async (req, res) => {
             item.preparedBy,
             item.tableno,
 			item.mobileno,
-            item.tokenNo,
             item.date,
             item.time,
             item.cname,
             item.note,
             item.billstatus,
             item.billno,
-			item.peopleNo
+			item.address,
         ]);
 		const sql = `INSERT INTO products_bills 
-            (itemno, qty, foodstatus, waitername, preparedBy, tableno, mobileno, tokenNo, date, time, cname, note, billstatus, billno, peopleNo) 
+            (itemno, qty, foodstatus, waitername, preparedBy, tableno, mobileno, date, time, cname, note, billstatus, billno,address) 
             VALUES ?`;
 
         const [result] = await conn.query(sql, [values]);
 		
         //await conn.query("INSERT INTO bills SET ?", [billData]);
         await conn.commit();
-		res.json({ response: 'success', affectedRows: result.affectedRows, tokenNo: newToken, billNo: billNo });
+		res.json({ response: 'success', affectedRows: result.affectedRows, billNo: billNo });
 	
 	} catch (err) {
         // If anything fails, undo changes so the token isn't "lost"
