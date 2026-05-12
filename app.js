@@ -1555,6 +1555,49 @@ app.post('/api/updateResturantInfo', authenticateToken, async (req, res) => {
 });
 
 
+// ***** GET all products Orders ******
+app.get('/api/getAllProductsOrders', authenticateToken, async (req, res) => {
+    try {
+        const { waiterName } = req.query;
+        // Typically used for the KOT (Kitchen Order Ticket) display
+        // We filter out self-dinein/parcel if needed, or show all based on your logic
+        const [results] = await pool.query(
+            "SELECT * FROM products_bills where foodstatus='preparing'", 
+            [waiterName]
+        );
+        res.json(results);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error fetching kitchen orders");
+    }
+});
+
+// ***** Mark Products Order Ready From Kitchen ******
+app.post('/api/markProductsOrderReady', authenticateToken, async (req, res) => {
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // Expects bill_id or unique ID to mark a specific item/order as prepared
+        var foodready  = 'ready',  foodpreparing = 'preparing';
+
+        const [result] = await connection.query(
+            'UPDATE products_bills SET foodstatus = ? WHERE billno = ? AND foodstatus = ?', [foodready, req.body.billno, foodpreparing]
+        );
+
+        await connection.commit();
+        res.json({ status: 'success', affectedRows: result.affectedRows });
+    } catch (err) {
+        await connection.rollback();
+        console.error("Mark Order Ready Error:", err);
+        res.status(500).send("Error updating order status");
+    } finally {
+        connection.release();
+    }
+});
+
+
 	const port = process.env.PORT || 3000;
 // Binding express app to port 3000
 app.listen(port, '0.0.0.0',function(){
