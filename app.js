@@ -1600,10 +1600,10 @@ app.post('/api/markProductsOrderReady', authenticateToken, async (req, res) => {
 // ***** GET all products Orders table 500 ie customer parcel******
 app.get('/api/getProductssOrdersByDate', authenticateToken, async (req, res) => {
     try {
-        const { date, waiterName } = req.query;
+        const { date } = req.query;
         const [results] = await pool.query(
             "SELECT * FROM products_bills WHERE date = ? and foodstatus != '' ORDER BY bill_id",
-            [date, waiterName]
+            [date]
         );
         res.json(results);
     } catch (err) {
