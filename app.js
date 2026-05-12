@@ -1613,6 +1613,24 @@ app.get('/api/getProductssOrdersByDate', authenticateToken, async (req, res) => 
 });
 
 
+// ***** GET all products Orders for Reffered By ******
+app.get('/api/getAllProductsOrdersForRef', authenticateToken, async (req, res) => {
+    try {
+        const { waiterName } = req.query;
+        // Typically used for the KOT (Kitchen Order Ticket) display
+        // We filter out self-dinein/parcel if needed, or show all based on your logic
+        const [results] = await pool.query(
+            "SELECT * FROM products_bills where waitername=?", 
+            [waiterName]
+        );
+        res.json(results);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error fetching kitchen orders");
+    }
+});
+
+
 	const port = process.env.PORT || 3000;
 // Binding express app to port 3000
 app.listen(port, '0.0.0.0',function(){
