@@ -1597,6 +1597,21 @@ app.post('/api/markProductsOrderReady', authenticateToken, async (req, res) => {
     }
 });
 
+// ***** GET all products Orders table 500 ie customer parcel******
+app.get('/api/getProductssOrdersByDate', authenticateToken, async (req, res) => {
+    try {
+        const { date, waiterName } = req.query;
+        const [results] = await pool.query(
+            "SELECT * FROM products_bills WHERE date = ? and foodstatus != '' ORDER BY bill_id",
+            [date, waiterName]
+        );
+        res.json(results);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error fetching orders");
+    }
+});
+
 
 	const port = process.env.PORT || 3000;
 // Binding express app to port 3000
