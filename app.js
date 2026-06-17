@@ -1406,6 +1406,12 @@ app.post('/api/addPendingOrders', authenticateToken, async (req, res) => {
 		inserts.push(['V', Number(req.body.qty_vadi), req.body.cName, req.body.status, req.body.date]);
 	if(Number(req.body.qty_coffee)>0)
 		inserts.push(['C', Number(req.body.qty_coffee), req.body.cName, req.body.status, req.body.date]);
+	if(Number(req.body.qty_lassi)>0)
+		inserts.push(['L', Number(req.body.qty_lassi), req.body.cName, req.body.status, req.body.date]);
+	if(Number(req.body.qty_cold)>0)
+		inserts.push(['CC', Number(req.body.qty_cold), req.body.cName, req.body.status, req.body.date]);
+	if(Number(req.body.qty_papad)>0)
+		inserts.push(['P', Number(req.body.qty_papad), req.body.cName, req.body.status, req.body.date]);
 		
 		//const orderData = req.body; // Assuming this is your array of order objects
 
@@ -1470,8 +1476,14 @@ app.post('/api/updatePendingOrders', authenticateToken, async (req, res) => {
 		tmpQty = req.body.qty_bhaji;
 	  }else if(req.body.qty_vadi!=undefined){
 		tmpQty = req.body.qty_vadi;
-	  }else{
+	  }else if{
 		tmpQty = req.body.qty_coffee;
+	  }else if{
+		tmpQty = req.body.qty_lassi;
+	  }else if{
+		tmpQty = req.body.qty_cold;
+	  }else{
+		tmpQty = req.body.qty_papad;
 	  }
 	  
         const [result] = await pool.query(
