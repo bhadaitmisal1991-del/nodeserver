@@ -1476,11 +1476,11 @@ app.post('/api/updatePendingOrders', authenticateToken, async (req, res) => {
 		tmpQty = req.body.qty_bhaji;
 	  }else if(req.body.qty_vadi!=undefined){
 		tmpQty = req.body.qty_vadi;
-	  }else if{
+	  }else if(req.body.qty_coffee!=undefined){
 		tmpQty = req.body.qty_coffee;
-	  }else if{
+	  }else if(req.body.qty_lassi!=undefined){
 		tmpQty = req.body.qty_lassi;
-	  }else if{
+	  }else if(req.body.qty_cold!=undefined){
 		tmpQty = req.body.qty_cold;
 	  }else{
 		tmpQty = req.body.qty_papad;
