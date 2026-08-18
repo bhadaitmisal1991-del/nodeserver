@@ -110,6 +110,7 @@ app.post('/api/addNewBill', async (req, res) => {
 	//const { date, isToken } = req.query;
 	const conn = await pool.getConnection();
 	try {
+		await conn.query('LOCK TABLES bills WRITE'); //**
 		await conn.beginTransaction();
 		var tmpdate = req.query.date;
 		var newToken = 0;
@@ -201,6 +202,7 @@ app.post('/api/addNewBill', async (req, res) => {
         res.status(500).json({ error: "Failed to generate token", details: err.message });
     } finally {
         // Release the connection back to the pool
+		await conn.query('UNLOCK TABLES').catch(() => {}); //**
         conn.release();
     }
      
